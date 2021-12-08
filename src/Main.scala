@@ -1,22 +1,23 @@
-case class Pos(x: Int, y: Int)
-
-case class Line(x1: Int, y1: Int, x2: Int, y2: Int) {
-  def points: Seq[Pos] = {
-    val length = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1))
-    val x_step = if (x1 > x2) -1 else if (x1 < x2) 1 else 0
-    val y_step = if (y1 > y2) -1 else if (y1 < y2) 1 else 0
-    (0 to length).map{i => Pos(x1 + x_step*i, y1 + y_step*i) }
-  }
-}
-
 object Main extends App {
-  val Pattern = "([0-9]+),([0-9]+) -> ([0-9]+),([0-9]+)".r
-  val file = scala.io.Source.fromFile("./data/5")
-  val repeats = file.getLines().map{case Pattern(x1,y1,x2,y2) => Line(x1.toInt,y1.toInt,x2.toInt,y2.toInt) }
-    .foldLeft((Set.empty[Pos], Set.empty[Pos])){(previous, line) =>
-      val points = line.points.toSet
-      (previous._1 ++ points, previous._2 ++ (previous._1 intersect points))
-    }._2.size
+  def fuelCost(dist: Long): Long = dist*(dist + 1)/2 // sum of 1...N
 
-  println(s"repeats: $repeats")
+  val Num = "([0-9]+)".r
+  val file = scala.io.Source.fromFile("./data/7")
+  var minPos: Int = Int.MaxValue
+  var maxPos: Int = Int.MinValue
+  val crabs = file.getLines().next().split(",").flatMap{
+    case Num(x) =>
+      val pos = x.toInt
+      minPos = Math.min(minPos, pos)
+      maxPos = Math.max(maxPos, pos)
+      Some(pos)
+    case _ => None
+  }
+  val min = (minPos to maxPos).foldLeft((Long.MaxValue,Long.MaxValue)){(accum,pos) =>
+      val cost = crabs.foldLeft(0L){(accum, crab) => accum + fuelCost(Math.abs(crab - pos)) }
+      println(s"$pos: $cost")
+      if (cost < accum._2) (pos, cost) else accum
+  }
+
+  println(s"Min: $min")
 }
