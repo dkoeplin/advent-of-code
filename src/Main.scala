@@ -1,83 +1,55 @@
 import scala.collection.mutable
 
-case class Pos(i: Int, j: Int)
+case class Brackets() {
+  val stack: mutable.Buffer[(Int,Int)] = mutable.Buffer.empty[(Int,Int)]
+  def open(c: Char, col: Int): Boolean = { stack += ((Brackets.openType(c), col)); false }
+  def close(c: Char, col: Int): Boolean = {
+    val valid = stack.lastOption.forall{case (o,_) => o == Brackets.closeType(c) }
+    if (valid && stack.nonEmpty) stack.remove(stack.size - 1)
+    !valid
+  }
+}
+object Brackets {
+  val open = "([{<"
+  val close = ")]}>"
+  val closeType: Map[Char,Int] = close.zipWithIndex.toMap
+  val openType: Map[Char,Int] = open.zipWithIndex.toMap
+  val closeChar: Map[Int,Char] = close.zipWithIndex.map{case (c,i) => i -> c}.toMap
+  val openChar: Map[Int,Char] = open.zipWithIndex.map{case (c,i) => i -> c}.toMap
+  val part1Scores: Array[Int] = Array[Int](3, 57, 1197, 25137)
+  val part2Scores: Array[Int] = Array[Int](1, 2, 3, 4)
+}
 
 object Main extends App {
-  val file = scala.io.Source.fromFile("./data/9")
+  val Open = "([(\\[{<])".r
+  val Close = "([)\\]}>])".r
+  val file = scala.io.Source.fromFile("./data/10")
 
-  // Padding because lazy
-  val raw: Array[Array[Char]] = file.getLines().map{row => '9' +: row.toArray :+ '9'}.toArray
-  val cols = raw(0).length
-  val padding = Array.fill[Char](cols)('9')
-  val map: Array[Array[Char]] = padding +: raw :+ padding
-  map.foreach(row => println(row.mkString("")))
-  val rows = map.length
-
-  def part1(): Unit = {
-    def isLowPoint(i: Int, j: Int): Boolean = {
-      map(i - 1)(j) > map(i)(j) && map(i)(j - 1) > map(i)(j) &&
-        map(i + 1)(j) > map(i)(j) && map(i)(j + 1) > map(i)(j)
-    }
-    val sum = (1 to rows - 2).foldLeft(0){(accum, i) =>
-      (1 to cols - 2).foldLeft(accum){(accum,j) =>
-        if (isLowPoint(i, j)) accum + map(i)(j) - '0' + 1 else accum
-      }
-    }
-
-    println(s"Part 1: (Sum): $sum")
+  def error(code: String, line: Int, col: Int, message: String): Unit = {
+    Console.err.println(s"${line+1}:${col+1}: $message")
+    Console.err.println(code)
+    Console.err.println(" " * col + "^")
   }
 
-  def part2(): Unit = {
-    val basins = Seq.tabulate(rows) { _ => mutable.Seq.fill(cols)(-1) }
-    var iter: Int = -1
-    val sizes: mutable.Map[Int, Seq[Pos]] = mutable.Map.empty
-    (0 until rows - 1).foreach { i =>
-      (0 until cols - 1).foreach { j =>
-        if (map(i)(j) < '9') {
-          val up: Int = basins(i - 1)(j)
-          val left: Int = basins(i)(j - 1)
-
-          val label = if (up != -1 && left != -1 && up != left) {
-            val removed = Math.max(up, left)
-            val intersect = Math.min(up, left)
-            sizes(removed).foreach{pos => basins(pos.i)(pos.j) = intersect }
-            sizes(intersect) ++= sizes(removed)
-            sizes(removed) = Nil
-            intersect
-          } else if (up != -1) {
-            up
-          } else if (left != -1) {
-            left
-          } else {
-            iter = (iter + 1).toChar
-            iter
-          }
-          basins(i)(j) = label
-          sizes(label) = sizes.getOrElse(label, Nil) :+ Pos(i,j)
-        }
-      }
+  val (part1, part2) = file.getLines().zipWithIndex.foldLeft((0, List.empty[Long])){case (accum, (code, line)) =>
+    val brackets = Brackets()
+    val unmatched = code.zipWithIndex.find{
+      case (Open(c), col) => brackets.open(c, col)
+      case (Close(c), col) => brackets.close(c, col)
+      case (c, col) => error(code, line, col, s"Invalid character: $c"); false
     }
-    basins.foreach{line => println(line.map{c => if (c == -1) '!' else ('#' + (c % ('z' - '#'))).toChar }.mkString("")) }
-
-    // Sanity check:
-    def invalid(i: Int, j: Int, c: Int): Boolean = basins(i)(j) != -1 &&  basins(i)(j) != c
-    (0 until rows).foreach{i =>
-      (0 until cols).foreach{j =>
-        val c = basins(i)(j)
-        if (c != -1) {
-          if (invalid(i - 1, j, c) || invalid(i + 1, j, c) || invalid(i, j - 1, c) || invalid(i, j + 1, c))
-            println(s"Invalid at $i, $j")
-        }
-      }
+    val part1 = unmatched.map{case (c,_) => Brackets.part1Scores(Brackets.closeType(c)) }.getOrElse(0)
+    unmatched.foreach{case (c,col) =>
+      val expected = Brackets.closeChar(brackets.stack.last._1)
+      error(code, line, col, s"Expected $expected, but found $c instead.")
     }
-    val sorted = sizes.toList.map{case (label,pos) => label -> pos.length}.sortBy {x => -x._2}
-    sorted.take(6).foreach{case (label, len) =>
-      println(s"$label: $len (${('#' + (label % ('z' - '#'))).toChar})")
-    }
-    val max3 = sizes.values.toSeq.map(_.length).sortBy(x => -x).take(3)
-    println(s"Part 2: ${max3.mkString(" * ")} = ${max3.product}")
+    val part2 = if (unmatched.isEmpty) {
+      Some(brackets.stack.reverseIterator.foldLeft(0L){case (accum, (tp,_)) => 5*accum + Brackets.part2Scores(tp) })
+    } else None
+    (accum._1 + part1, accum._2 ++ part2)
   }
+  val part2Score = part2.sorted.apply(part2.size / 2)
 
-  //part1()
-  part2()
+  println(s"Part 1: Score: $part1")
+  println(s"Part 2: Score: $part2Score")
 }
