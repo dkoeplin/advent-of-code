@@ -1,55 +1,51 @@
 import scala.collection.mutable
 
-case class Brackets() {
-  val stack: mutable.Buffer[(Int,Int)] = mutable.Buffer.empty[(Int,Int)]
-  def open(c: Char, col: Int): Boolean = { stack += ((Brackets.openType(c), col)); false }
-  def close(c: Char, col: Int): Boolean = {
-    val valid = stack.lastOption.forall{case (o,_) => o == Brackets.closeType(c) }
-    if (valid && stack.nonEmpty) stack.remove(stack.size - 1)
-    !valid
-  }
+class Matrix[T](vs: Iterator[Iterable[T]]) {
+  val data: Array[mutable.Seq[T]] = vs.map{vs => mutable.Seq.empty[T] ++ vs }.toArray
+  val rows: Int = data.length
+  val cols: Int = if (data.nonEmpty) data(0).length else 0
+  def get(i: Int, j: Int): Option[T] = if (i >= 0 && i < rows && j >= 0 && j < cols) { Some(data(i)(j)) } else None
+  def apply(i: Int, j: Int): T = data(i)(j)
+  def update(i: Int, j: Int, value: T): Unit = if (i >= 0 && i < rows && j >= 0 && j < cols) { data(i)(j) = value }
+  def update(i: Int, j: Int, value: Option[T]): Unit = value.foreach{v => update(i, j, v) }
+
+  def indices(): Seq[(Int,Int)] = (0 until rows).flatMap{i => (0 until cols).map{j => (i,j) }}
+
+  override def toString: String = data.map{vs => vs.map{x => Matrix.digit(x)}.mkString("")}.mkString("\n")
 }
-object Brackets {
-  val open = "([{<"
-  val close = ")]}>"
-  val closeType: Map[Char,Int] = close.zipWithIndex.toMap
-  val openType: Map[Char,Int] = open.zipWithIndex.toMap
-  val closeChar: Map[Int,Char] = close.zipWithIndex.map{case (c,i) => i -> c}.toMap
-  val openChar: Map[Int,Char] = open.zipWithIndex.map{case (c,i) => i -> c}.toMap
-  val part1Scores: Array[Int] = Array[Int](3, 57, 1197, 25137)
-  val part2Scores: Array[Int] = Array[Int](1, 2, 3, 4)
+object Matrix {
+  def apply[T](vs: Iterator[Iterable[T]]): Matrix[T] = new Matrix(vs)
+  def digit[T](x: T): String = x match {
+    case x: Int => val str = Integer.toHexString(x); if (str.length > 1) "N" else str
+    case _ => x.toString
+  }
 }
 
 object Main extends App {
-  val Open = "([(\\[{<])".r
-  val Close = "([)\\]}>])".r
-  val file = scala.io.Source.fromFile("./data/10")
+  def neighbors() = (-1 to 1).iterator.flatMap{i => (-1 to 1).map{j => (i, j)}}.filterNot{case (i,j) => i == 0 && j == 0}
 
-  def error(code: String, line: Int, col: Int, message: String): Unit = {
-    Console.err.println(s"${line+1}:${col+1}: $message")
-    Console.err.println(code)
-    Console.err.println(" " * col + "^")
+  val file = scala.io.Source.fromFile("./data/11")
+  val grid = Matrix(file.getLines().map(_.map(_ - '0')))
+  var flashes: Int = 0
+  def increment(i: Int, j: Int): Boolean = {
+    grid(i, j) = grid.get(i,j).map(_ + 1)
+    grid.get(i,j).contains(10)
+  }
+  def flash(i: Int, j: Int): Iterable[(Int,Int)] = {
+    flashes += 1
+    neighbors().map{case (di, dj) => (i + di, j + dj)}.filter{case (i, j) => increment(i, j) }.toSeq
+  }
+  def step(): Unit = {
+    var flashers: Seq[(Int,Int)] = grid.indices().filter{case (i,j) => increment(i,j) }
+    while (flashers.nonEmpty) {
+      flashers = flashers.flatMap{case (i,j) => flash(i,j) }
+    }
+    grid.indices().foreach{case (i,j) => grid(i, j) = grid.get(i, j).filter(_ >= 10).map(_ => 0) }
   }
 
-  val (part1, part2) = file.getLines().zipWithIndex.foldLeft((0, List.empty[Long])){case (accum, (code, line)) =>
-    val brackets = Brackets()
-    val unmatched = code.zipWithIndex.find{
-      case (Open(c), col) => brackets.open(c, col)
-      case (Close(c), col) => brackets.close(c, col)
-      case (c, col) => error(code, line, col, s"Invalid character: $c"); false
-    }
-    val part1 = unmatched.map{case (c,_) => Brackets.part1Scores(Brackets.closeType(c)) }.getOrElse(0)
-    unmatched.foreach{case (c,col) =>
-      val expected = Brackets.closeChar(brackets.stack.last._1)
-      error(code, line, col, s"Expected $expected, but found $c instead.")
-    }
-    val part2 = if (unmatched.isEmpty) {
-      Some(brackets.stack.reverseIterator.foldLeft(0L){case (accum, (tp,_)) => 5*accum + Brackets.part2Scores(tp) })
-    } else None
-    (accum._1 + part1, accum._2 ++ part2)
-  }
-  val part2Score = part2.sorted.apply(part2.size / 2)
+  (1 to 100).foreach{_ => step() }
+  println(s"Part 1: Flashes: $flashes")
 
-  println(s"Part 1: Score: $part1")
-  println(s"Part 2: Score: $part2Score")
+  val part2 = (101 to 1000).find{_ => step(); grid.indices().forall{case (i,j) => grid(i,j) == 0 }}
+  println(s"Part 2: Step: ${part2.map(_.toString).getOrElse("> 1000")}")
 }
