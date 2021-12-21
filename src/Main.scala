@@ -1,122 +1,90 @@
 import scala.collection.mutable
 
-case class Header(version: Long, tp: Long)
-
-abstract class Packet(val header: Header) {
-  val id: Int = { Packet.id += 1; Packet.id }
-  final override def toString: String = s"%$id"
-  final override def hashCode(): Int = id
-  def readable: String
-  def evaluate: Long
-}
-case class Literal(override val header: Header, literal: Long) extends Packet(header) {
-  def readable: String = s"%$id = ${header.version}.Const($literal)"
-  def evaluate: Long = literal
-}
-case class Operator(override val header: Header, packets: Seq[Packet], end: Int) extends Packet(header) {
-  def readable: String = s"%$id = ${header.version}.${Packet.opNames(header.tp)}(${packets.mkString(", ")})"
-  def evaluate: Long = {
-    val elems = packets.map(_.evaluate)
-    header.tp match {
-      case 0 => elems.sum
-      case 1 => elems.product
-      case 2 => elems.min
-      case 3 => elems.max
-      case 5 => if (elems(0) > elems(1)) 1L else 0L
-      case 6 => if (elems(0) < elems(1)) 1L else 0L
-      case 7 => if (elems(0) == elems(1)) 1L else 0L
-      case tp => sys.error(s"Invalid packet type: $tp")
-    }
-  }
-}
-
-case class PacketBuilder(
-  header: Header,
-  byPacketCount: Boolean, // 0 - total length of subpackets (15b), 1 - # subpackets (11)
-  end: Long,
-  packets: mutable.Buffer[Packet] = mutable.Buffer.empty[Packet]
-) {
-  def reify(pos: Int): Operator = Operator(header, packets, pos)
-}
-
-object Packet {
-  type Bits = String
-  var id: Int = -1
-
-  val opNames: Map[Long,String] = Map[Long,String](
-    0L -> "Sum", 1L -> "Product", 2L -> "Min", 3L -> "Max",
-    5L -> "GreaterThan",  6L -> "LessThan", 7L -> "Equals"
-  )
-
-  val hex: Map[Char,Bits] = Map[Char,Bits](
-    '0' -> "0000", '1' -> "0001", '2' -> "0010", '3' -> "0011",
-    '4' -> "0100", '5' -> "0101", '6' -> "0110", '7' -> "0111",
-    '8' -> "1000", '9' -> "1001", 'A' -> "1010", 'B' -> "1011",
-    'C' -> "1100", 'D' -> "1101", 'E' -> "1110", 'F' -> "1111")
-
-  def parse(x: Bits): Seq[Packet] = {
-    var pos: Int = 0
-    def parseBool(): Boolean = { val value = x.charAt(pos) == '1'; pos += 1; value }
-    def rawBits(n: Int): Bits = { val value = x.substring(pos, pos + n); pos += n; value }
-    def parseInt(n: Int): Long = BigInt(rawBits(n), 2).longValue()
-
-    def done(builder: PacketBuilder): Boolean = {
-      if (builder.byPacketCount) builder.packets.size >= builder.end else pos >= builder.end
-    }
-
-    val packets = mutable.Buffer.empty[Packet]
-    val stack = mutable.Stack[PacketBuilder]()
-
-    def finishPacket(packet: Packet): Unit = {
-      packets += packet
-      if (stack.nonEmpty)
-        stack.top.packets += packet
-    }
-
-    do {
-      // Header
-      // (version: 3b)(type: 3b)
-
-      // Type 4 - Literal
-      // [Header: 6b]1(4b)1(4b) ... 0(4b) (0 padding to 4 bits)
-
-      // Operators
-      // [Header: 6b]0(length of subpackets in bits: 15b)(subpackets)
-      // [Header: 6b]1(number of subpackets: 11b)(subpackets)
-
-      if (stack.nonEmpty && done(stack.top)) {
-        val current = stack.pop()
-        finishPacket(current.reify(pos))
-      } else {
-        val header = Header(version = parseInt(3), tp = parseInt(3))
-        if (header.tp == 4) {
-          var continue = true
-          val bits = new mutable.StringBuilder
-          while (continue) { continue = parseBool(); bits ++= rawBits(4) }
-          val packet = Literal(header, BigInt(bits.mkString, 2).longValue())
-          finishPacket(packet)
-        } else {
-          val byPacketCount = parseBool()
-          val end = if (byPacketCount) parseInt(11) else parseInt(15) + pos
-          stack.push(PacketBuilder(header, byPacketCount, end))
-        }
-      }
-    } while (stack.nonEmpty && pos < x.length)
-
-    packets
+object Target {
+  private val Number = "\\-?[0-9]+"
+  private val TargetPattern = (s"target area: x=($Number)\\.\\.($Number), y=($Number)\\.\\.($Number)").r
+  def unapply(x: String): Option[(Int,Int,Int,Int)] = x match {
+    case TargetPattern(x0,x1,y0,y1) => Some((x0.toInt,x1.toInt,y0.toInt,y1.toInt))
+    case _ => None
   }
 }
 
 object Main extends App {
-  val file = scala.io.Source.fromFile("./data/16")
-  file.getLines().zipWithIndex.filterNot(_._1.startsWith("#")).foreach{case (line, idx) =>
-    println(s"Line ${idx+1}: $line:")
-    val binary = line.flatMap{c => Packet.hex(c) }.mkString
-    val packets = Packet.parse(binary)
-    packets.foreach{p => println(s"  ${p.readable}") }
-    val part1 = packets.foldLeft(0L){case (accum, packet) => accum + packet.header.version }
-    val part2 = packets.last.evaluate
-    println(s"  Part 1 (Version Sum): $part1")
-    println(s"  Part 2 (Evaluation): $part2")
+  val file = scala.io.Source.fromFile("./data/17")
+  //   T
+  // V/ \
+  // 0   |
+  //     F
+  file.getLines().foreach{case line @ Target(xMin, xMax, yMin, yMax) =>
+    // xMin <= sum(0 .. Vx) <= xMax
+
+    // Max height is sum(0 .. initial Y velocity) = Y*(Y+1)/2
+    // Fall height is sum(0 .. falling steps) = N*(N+1)/2
+    // Final Y = Max Height - Fall Height = sum(0 to Y) - sum(0 to N) = -sum(Y+1 to N)
+    // > maximum height achievable is where initial Y velocity = yFinal - 1
+    // > want # steps for Y direction is 2*Y + 2
+    // > choose initial velocities such that
+    //   yMin <= Y <= yMax - 1
+    //   xMin <= sum(Max(0, X - 2*Y - 2) to X) <= xMax
+    //
+    // try
+    //   xMin <= sum(Max(0, X - 2*yMax - 2) to X) <= xMax
+    //   xMin <= X(X+1)/2 - (X - 2*yMax)(2*X - (4*yMax + 3)) <= xMax
+    // 0.5*X^2 + 0.5*X - xMax = 0
+    // sqrt(0.25 + 2*xMax) - 0.5
+    // OR
+    // 0.5*X^2 + 0.5*X - 2*X^2 + (8*yMax + 3)*X - xMax - 2*yMax*(4*yMax + 3) = 0
+    // -1.5X^2 + (8*yMax + 3.5)*X - (xMax + 2*yMax*(4*yMax + 3)) = 0
+    // ((8*yMax + 3.5) - sqrt((8*yMax + 3.5)^2 - 6*(xMax + 2*yMax*(4*yMax + 3)))/3
+
+    val yAbs = Math.max(Math.abs(yMax), Math.abs(yMin))
+
+    val y = yAbs - 1
+    val xDouble = Math.sqrt(0.25 + 2.0*xMax) - 0.5
+    var x = xDouble.toInt
+    val ySteps = 2*y + 2
+    val xSteps = Math.min(x, ySteps)
+    var xEnd = x - xSteps
+    var xFinal = x*(x + 1)/2 - xEnd*(xEnd + 1)/2
+
+    if (x > ySteps) { // Reaches Y much quicker than X - initial X velocity needs to be higher
+      x = (xMax / ySteps) + (ySteps / 2)
+      xEnd = x - ySteps
+      xFinal = x*(x + 1)/2 - xEnd*(xEnd + 1)/2
+    }
+
+    val maxY = y*(y + 1)/2
+
+    println(s"$line:")
+    println(s"  Part 1 (Initial Velocities): X: $x, Y: $y")
+    println(s"    Final X: $xFinal, Final Y: ${-y - 1}; Y steps: $ySteps")
+    println(s"    Maximum height: $maxY")
+    println(s"    Target: X: [$xMin,$xMax], Y: [$yMin,$yMax]")
+
+    // Part 2
+    // Doing this the bruteforce way cause lol
+    def reaches(vyInit: Int, vxInit: Int): Boolean = {
+      var failed = false
+      var passed = false
+      var vx: Int = vxInit
+      var vy: Int = vyInit
+      var x: Int = 0
+      var y: Int = 0
+      while (!failed && !passed) {
+        x += vx
+        y += vy
+        vx = if (vx < 0) Math.min(vx + 1, 0) else Math.max(0, vx - 1)
+        vy = vy - 1
+        passed = (x >= xMin && x <= xMax) && (y >= yMin && y <= yMax)
+        failed = x > xMax || y < yMin || (x < xMin && vx == 0)
+      }
+      passed && !failed
+    }
+
+    val reached = (-yAbs until yAbs).flatMap{vy =>
+      (0 to xMax).map{vx => (vy,vx)}.filter{case (vy,vx) => reaches(vy, vx) }
+    }
+    val part2 = reached.length
+    println(s"  Part 2 (Number of initial velocities): $part2")
   }
 }
