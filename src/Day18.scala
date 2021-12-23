@@ -1,5 +1,4 @@
 import scala.collection.mutable
-import scala.language.implicitConversions
 
 object Directions extends Enumeration {
   type Dir = Value
