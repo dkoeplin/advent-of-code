@@ -175,7 +175,7 @@ object Pair {
   }
 }
 
-object Main extends App {
+object Day18 extends App {
   var explodePassed = true
   var splitPassed = true
   var magnitudePassed = true
