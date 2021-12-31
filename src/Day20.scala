@@ -1,4 +1,4 @@
-import common.Matrix
+import common.mutable.Matrix
 
 object Day20 extends App {
   val window = Seq((-1,-1),(-1,0),(-1,1),(0,-1),(0,0),(0,1),(1,-1),(1,0),(1,1))

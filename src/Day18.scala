@@ -1,12 +1,6 @@
 import scala.collection.mutable
-
-object Directions extends Enumeration {
-  type Dir = Value
-  def flip(dir: Dir): Dir = if (dir == L) R else L
-  val L = Value("L")
-  val R = Value("R")
-}
-import Directions._
+import common.Directions
+import common.Directions._
 
 case class Trace(path: List[Dir], x: Either[Int,Pair]) {
   def pair: Pair = x.right.get

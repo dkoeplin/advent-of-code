@@ -1,4 +1,4 @@
-import common.Matrix
+import common.mutable.Matrix
 
 object Day11 extends App {
   def neighbors() = (-1 to 1).iterator.flatMap{i => (-1 to 1).map{j => (i, j)}}.filterNot{case (i,j) => i == 0 && j == 0}
