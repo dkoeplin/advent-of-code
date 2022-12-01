@@ -1,23 +1,25 @@
+package Year2021
+
 import common.mutable.Matrix
 
 object Day20 extends App {
-  val window = Seq((-1,-1),(-1,0),(-1,1),(0,-1),(0,0),(0,1),(1,-1),(1,0),(1,1))
+  val window = Seq((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1))
 
   val file = io.Source.fromFile("./data/20")
   val lines = file.getLines()
-  val table: Array[Int] = lines.next().map{case '#' => 1 case '.' => 0}.toArray
-  val data = lines.filter(_.nonEmpty).map{line => line.map{case '#' => 1 case '.' => 0}}
+  val table: Array[Int] = lines.next().map { case '#' => 1 case '.' => 0 }.toArray
+  val data = lines.filter(_.nonEmpty).map { line => line.map { case '#' => 1 case '.' => 0 } }
   val input: Matrix[Int] = Matrix(data)
 
-  def enhance(x: Matrix[Int], default: Int): Matrix[Int] = Matrix((-1 to x.rows).iterator.map{i =>
+  def enhance(x: Matrix[Int], default: Int): Matrix[Int] = Matrix((-1 to x.rows).iterator.map { i =>
     (-1 to x.cols).map { j =>
-      val w = window.map{case (di, dj) => x.getOrElse(i + di, j + dj, default) }.mkString("")
+      val w = window.map { case (di, dj) => x.getOrElse(i + di, j + dj, default) }.mkString("")
       table(Integer.parseInt(w, 2))
     }
   })
 
   def enhanceN(x: Matrix[Int], steps: Int): Matrix[Int] = {
-    (0 until steps).foldLeft(x){case (mat, i) =>
+    (0 until steps).foldLeft(x) { case (mat, i) =>
       val default = if (table(0) == 1) i % 2 else 0
       enhance(mat, default)
     }

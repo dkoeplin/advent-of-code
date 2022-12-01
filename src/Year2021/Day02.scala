@@ -1,3 +1,5 @@
+package Year2021
+
 
 case class Position(horizontal: Int = 0, vertical: Int = 0) {
   def up(dist: Int): Position = Position(horizontal, vertical - dist)

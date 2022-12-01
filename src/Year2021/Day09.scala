@@ -1,12 +1,14 @@
-import scala.collection.mutable
+package Year2021
 
 import common.Pos
+
+import scala.collection.mutable
 
 object Day09 extends App {
   val file = scala.io.Source.fromFile("./data/9")
 
   // Padding because lazy
-  val raw: Array[Array[Char]] = file.getLines().map{row => '9' +: row.toArray :+ '9'}.toArray
+  val raw: Array[Array[Char]] = file.getLines().map { row => '9' +: row.toArray :+ '9' }.toArray
   val cols = raw(0).length
   val padding = Array.fill[Char](cols)('9')
   val map: Array[Array[Char]] = padding +: raw :+ padding
@@ -18,8 +20,9 @@ object Day09 extends App {
       map(i - 1)(j) > map(i)(j) && map(i)(j - 1) > map(i)(j) &&
         map(i + 1)(j) > map(i)(j) && map(i)(j + 1) > map(i)(j)
     }
-    val sum = (1 to rows - 2).foldLeft(0){(accum, i) =>
-      (1 to cols - 2).foldLeft(accum){(accum,j) =>
+
+    val sum = (1 to rows - 2).foldLeft(0) { (accum, i) =>
+      (1 to cols - 2).foldLeft(accum) { (accum, j) =>
         if (isLowPoint(i, j)) accum + map(i)(j) - '0' + 1 else accum
       }
     }
@@ -40,7 +43,7 @@ object Day09 extends App {
           val label = if (up != -1 && left != -1 && up != left) {
             val removed = Math.max(up, left)
             val intersect = Math.min(up, left)
-            sizes(removed).foreach{pos => basins(pos.row)(pos.col) = intersect }
+            sizes(removed).foreach { pos => basins(pos.row)(pos.col) = intersect }
             sizes(intersect) ++= sizes(removed)
             sizes(removed) = Nil
             intersect
@@ -53,16 +56,17 @@ object Day09 extends App {
             iter
           }
           basins(i)(j) = label
-          sizes(label) = sizes.getOrElse(label, Nil) :+ Pos(i,j)
+          sizes(label) = sizes.getOrElse(label, Nil) :+ Pos(i, j)
         }
       }
     }
-    basins.foreach{line => println(line.map{c => if (c == -1) '!' else ('#' + (c % ('z' - '#'))).toChar }.mkString("")) }
+    basins.foreach { line => println(line.map { c => if (c == -1) '!' else ('#' + (c % ('z' - '#'))).toChar }.mkString("")) }
 
     // Sanity check:
-    def invalid(i: Int, j: Int, c: Int): Boolean = basins(i)(j) != -1 &&  basins(i)(j) != c
-    (0 until rows).foreach{i =>
-      (0 until cols).foreach{j =>
+    def invalid(i: Int, j: Int, c: Int): Boolean = basins(i)(j) != -1 && basins(i)(j) != c
+
+    (0 until rows).foreach { i =>
+      (0 until cols).foreach { j =>
         val c = basins(i)(j)
         if (c != -1) {
           if (invalid(i - 1, j, c) || invalid(i + 1, j, c) || invalid(i, j - 1, c) || invalid(i, j + 1, c))
@@ -70,8 +74,8 @@ object Day09 extends App {
         }
       }
     }
-    val sorted = sizes.toList.map{case (label,pos) => label -> pos.length}.sortBy {x => -x._2}
-    sorted.take(6).foreach{case (label, len) =>
+    val sorted = sizes.toList.map { case (label, pos) => label -> pos.length }.sortBy { x => -x._2 }
+    sorted.take(6).foreach { case (label, len) =>
       println(s"$label: $len (${('#' + (label % ('z' - '#'))).toChar})")
     }
     val max3 = sizes.values.toSeq.map(_.length).sortBy(x => -x).take(3)

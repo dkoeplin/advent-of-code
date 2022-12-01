@@ -1,7 +1,9 @@
-import scala.collection.mutable
-import scala.util.Try
+package Year2021
 
 import common.Pos
+
+import scala.collection.mutable
+import scala.util.Try
 
 case class Board(id: Int, board: Seq[Seq[Int]]) {
   val numRows: Int = board.size
@@ -18,7 +20,7 @@ case class Board(id: Int, board: Seq[Seq[Int]]) {
     rows(pos.row) += 1
     cols(pos.col) += 1
     score = score - x
-    println(s"Board $id: $x at (${pos.row}, ${pos.col}) (row: ${rows(pos.row)} / $numRows, col: ${cols(pos.col)} / $numCols)")
+    println(s"Year2021.Board $id: $x at (${pos.row}, ${pos.col}) (row: ${rows(pos.row)} / $numRows, col: ${cols(pos.col)} / $numCols)")
     rows(pos.row) == numRows || cols(pos.col) == numCols
   }
 }

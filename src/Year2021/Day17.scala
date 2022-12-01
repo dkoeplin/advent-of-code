@@ -1,3 +1,5 @@
+package Year2021
+
 
 object Target {
   private val Number = "\\-?[0-9]+"
@@ -58,7 +60,7 @@ object Day17 extends App {
     println(s"  Part 1 (Initial Velocities): X: $x, Y: $y")
     println(s"    Final X: $xFinal, Final Y: ${-y - 1}; Y steps: $ySteps")
     println(s"    Maximum height: $maxY")
-    println(s"    Target: X: [$xMin,$xMax], Y: [$yMin,$yMax]")
+    println(s"    Year2021.Target: X: [$xMin,$xMax], Y: [$yMin,$yMax]")
 
     // Part 2
     // Doing this the bruteforce way cause lol

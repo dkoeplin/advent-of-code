@@ -1,3 +1,5 @@
+package Year2021
+
 import scala.collection.mutable
 
 case class Header(version: Long, tp: Long)
@@ -74,15 +76,15 @@ object Packet {
     }
 
     do {
-      // Header
+      // Year2021.Header
       // (version: 3b)(type: 3b)
 
-      // Type 4 - Literal
-      // [Header: 6b]1(4b)1(4b) ... 0(4b) (0 padding to 4 bits)
+      // Type 4 - Year2021.Literal
+      // [Year2021.Header: 6b]1(4b)1(4b) ... 0(4b) (0 padding to 4 bits)
 
       // Operators
-      // [Header: 6b]0(length of subpackets in bits: 15b)(subpackets)
-      // [Header: 6b]1(number of subpackets: 11b)(subpackets)
+      // [Year2021.Header: 6b]0(length of subpackets in bits: 15b)(subpackets)
+      // [Year2021.Header: 6b]1(number of subpackets: 11b)(subpackets)
 
       if (stack.nonEmpty && done(stack.top)) {
         val current = stack.pop()

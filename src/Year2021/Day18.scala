@@ -1,6 +1,9 @@
-import scala.collection.mutable
+package Year2021
+
 import common.Directions
 import common.Directions._
+
+import scala.collection.mutable
 
 case class Trace(path: List[Dir], x: Either[Int,Pair]) {
   def pair: Pair = x.right.get

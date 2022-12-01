@@ -1,3 +1,5 @@
+package Year2021
+
 import scala.collection.mutable
 
 case class Point(x: Int, y: Int)

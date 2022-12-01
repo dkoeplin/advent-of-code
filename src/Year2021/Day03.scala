@@ -1,3 +1,5 @@
+package Year2021
+
 
 case class BitCount(ones: Array[Int] = Array.empty, total: Int = 0) {
   def +(str: String): BitCount = {

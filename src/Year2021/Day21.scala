@@ -1,3 +1,5 @@
+package Year2021
+
 import scala.collection.mutable
 
 object Day21 extends App {
@@ -6,14 +8,17 @@ object Day21 extends App {
   val PlayerStart = "Player . starting position: ([0-9]+)".r
   val file = io.Source.fromFile("./data/21")
   val lines = file.getLines()
-  val starts = lines.map{case PlayerStart(v) => v.toInt - 1 }.toArray
+  val starts = lines.map { case PlayerStart(v) => v.toInt - 1 }.toArray
 
   var rolls = 0
   var turn = 0
   var dice = 1
-  def roll(): Int = { val roll = dice; dice = if (dice == 100) 1 else dice + 1; rolls += 1; roll }
 
-  val players = starts.map{square => Player(square) }
+  def roll(): Int = {
+    val roll = dice; dice = if (dice == 100) 1 else dice + 1; rolls += 1; roll
+  }
+
+  val players = starts.map { square => Player(square) }
   while (!players.exists(_.score >= 1000)) {
     val current = players(turn)
     val total = roll() + roll() + roll()
@@ -46,27 +51,29 @@ object Day21 extends App {
   //   start 5: rolls {5, 7}: score = 10 + 7 = 17
   //   start 5: rolls {7, 5}: score = 2 + 7 = 9
 
-  val combinations = Map[Int,Long](
+  val combinations = Map[Int, Long](
     3 -> 1L, // 1,1,1
-    4 -> 3L,  // 1,1,2, 1,2,1, 2,1,1
-    5 -> 6L,  // 1,2,2, 2,1,2, 2,2,1, 3,1,1, 1,3,1, 1,1,3
-    6 -> 7L,  // 2,2,2, 1,2,3, 3,2,1, 2,3,1, 2,1,3, 3,1,2, 1,3,2
-    7 -> 6L,  // 3,2,2, 2,2,3, 2,3,2, 1,3,3, 3,3,1, 3,1,3
-    8 -> 3L,  // 3,2,3, 2,3,3, 3,3,2
-    9 -> 1L   // 3,3,3
+    4 -> 3L, // 1,1,2, 1,2,1, 2,1,1
+    5 -> 6L, // 1,2,2, 2,1,2, 2,2,1, 3,1,1, 1,3,1, 1,1,3
+    6 -> 7L, // 2,2,2, 1,2,3, 3,2,1, 2,3,1, 2,1,3, 3,1,2, 1,3,2
+    7 -> 6L, // 3,2,2, 2,2,3, 2,3,2, 1,3,3, 3,3,1, 3,1,3
+    8 -> 3L, // 3,2,3, 2,3,3, 3,3,2
+    9 -> 1L // 3,3,3
   )
 
   case class PlayerRecords(
-    dones: mutable.Map[Int, mutable.Buffer[Seq[Int]]] = mutable.Map.empty, // Number of rolls => #ways >= 21
-    notDones: mutable.Map[Int, mutable.Buffer[Seq[Int]]] = mutable.Map.empty // #rolls => roll => score
-  ) {
-    def wins(n: Int): Long = dones.getOrElse(n, Nil).map{rolls => rolls.map{r => combinations(r)}.product }.sum
-    def losses(n: Int): Long = notDones.getOrElse(n, Nil).map{rolls => rolls.map{r => combinations(r)}.product }.sum
+                            dones: mutable.Map[Int, mutable.Buffer[Seq[Int]]] = mutable.Map.empty, // Number of rolls => #ways >= 21
+                            notDones: mutable.Map[Int, mutable.Buffer[Seq[Int]]] = mutable.Map.empty // #rolls => roll => score
+                          ) {
+    def wins(n: Int): Long = dones.getOrElse(n, Nil).map { rolls => rolls.map { r => combinations(r) }.product }.sum
+
+    def losses(n: Int): Long = notDones.getOrElse(n, Nil).map { rolls => rolls.map { r => combinations(r) }.product }.sum
   }
+
   def countWins(player1: PlayerRecords, player2: PlayerRecords): (Long, Long) = {
     val max = Math.max(player1.dones.keys.max, player2.dones.keys.max)
-    val p1Wins = (1 to max).map{n => player1.wins(n) * player2.losses(n - 1) }.sum
-    val p2Wins = (1 to max).map{n => player2.wins(n) * player1.losses(n) }.sum
+    val p1Wins = (1 to max).map { n => player1.wins(n) * player2.losses(n - 1) }.sum
+    val p2Wins = (1 to max).map { n => player2.wins(n) * player1.losses(n) }.sum
     (p1Wins, p2Wins)
   }
 
@@ -78,10 +85,10 @@ object Day21 extends App {
     while (records.notDones(n - 1).nonEmpty) {
       records.dones(n) = mutable.Buffer.empty
       records.notDones(n) = mutable.Buffer.empty
-      records.notDones(n - 1).foreach{prevRoll =>
-        (3 to 9).foreach{roll =>
+      records.notDones(n - 1).foreach { prevRoll =>
+        (3 to 9).foreach { roll =>
           val rolls = prevRoll :+ roll
-          val score = n + rolls.indices.map{i => (start + rolls.take(i + 1).sum) % 10 }.sum
+          val score = n + rolls.indices.map { i => (start + rolls.take(i + 1).sum) % 10 }.sum
           if (score >= 21) records.dones(n) += rolls else records.notDones(n) += rolls
         }
       }

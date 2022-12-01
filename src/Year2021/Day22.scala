@@ -1,3 +1,5 @@
+package Year2021
+
 case class Cube(x1: Long, x2: Long, y1: Long, y2: Long, z1: Long, z2: Long, value: Long) {
   def shape: Seq[Long] = Seq(x2 - x1 + 1, y2 - y1 + 1, z2 - z1 + 1)
   def elements: Long = shape.product

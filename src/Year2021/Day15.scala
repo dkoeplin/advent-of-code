@@ -1,3 +1,5 @@
+package Year2021
+
 import scala.collection.mutable
 
 object Day15 extends App {
@@ -21,6 +23,7 @@ object Day15 extends App {
   case class Point(i: Int, j: Int) {
     def +(rhs: Point): Point = Point(i + rhs.i, j + rhs.j)
   }
+
   case class Pair(point: Point, cost: Int)
 
   def search(rows: Int, cols: Int): Int = {
@@ -29,9 +32,11 @@ object Day15 extends App {
 
     def isValid(point: Point): Boolean = point.i >= 0 && point.i < rows && point.j >= 0 && point.j < cols
 
-    val costs = mutable.Map.empty[Point,Int]
+    val costs = mutable.Map.empty[Point, Int]
     val visited = mutable.Set.empty[Point]
+
     def cost(x: Point): Int = costs.getOrElse(x, Int.MaxValue)
+
     implicit def pointOrdering: Ordering[Pair] = (a: Pair, b: Pair) => implicitly[Ordering[Int]].compare(-a.cost, -b.cost)
 
     val frontier = mutable.PriorityQueue.empty[Pair]
@@ -45,7 +50,7 @@ object Day15 extends App {
 
       if (continue && !visited.contains(current.point)) {
         visited += current.point
-        neighbors.iterator.map(_ + current.point).filter(isValid).filterNot(visited.contains).foreach{n =>
+        neighbors.iterator.map(_ + current.point).filter(isValid).filterNot(visited.contains).foreach { n =>
           val newCost = cost(current.point) + risk(n)
           if (newCost < cost(n)) {
             costs(n) = newCost
@@ -58,5 +63,5 @@ object Day15 extends App {
   }
 
   println(s"Part 1: ${search(tileRows, tileCols)}")
-  println(s"Part 2: ${search(tileRows*5, tileCols*5)}")
+  println(s"Part 2: ${search(tileRows * 5, tileCols * 5)}")
 }
