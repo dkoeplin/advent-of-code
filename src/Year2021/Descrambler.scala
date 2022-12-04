@@ -1,5 +1,7 @@
 package Year2021
 
+import scala.collection.{Map, View}
+
 object Descrambler extends App {
   val letters = "TEAWERHFROOPABLET".map(_.toLower)
   val masterCounts = countLetters(letters)
@@ -15,7 +17,7 @@ object Descrambler extends App {
 
   println(s"Filtered words. Remaining: ${words.size}")
 
-  def countLetters(x: String): Map[Char, Int] = x.groupBy(x => x).mapValues(_.length)
+  def countLetters(x: String): Map[Char, Int] = x.groupBy(x => x).view.mapValues(_.length).toMap
 
   def valid(word: String, remain: Map[Char, Int]): Option[Map[Char, Int]] = {
     val count = countLetters(word)
@@ -24,7 +26,7 @@ object Descrambler extends App {
   }
 
   def diff(a: Map[Char, Int], b: Map[Char, Int]): Map[Char, Int] = {
-    a.map { case (c, n) => (c, n - b.getOrElse(c, 0)) }
+    a.map { case (c, n) => (c, n - b.getOrElse(c, 0)) }.toMap
   }
 
   case class Found(x: Seq[String], remain: Map[Char, Int]) {

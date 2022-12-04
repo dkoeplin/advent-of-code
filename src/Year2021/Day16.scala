@@ -15,7 +15,7 @@ case class Literal(override val header: Header, literal: Long) extends Packet(he
   def readable: String = s"%$id = ${header.version}.Const($literal)"
   def evaluate: Long = literal
 }
-case class Operator(override val header: Header, packets: Seq[Packet], end: Int) extends Packet(header) {
+case class Operator(override val header: Header, packets: mutable.Seq[Packet], end: Int) extends Packet(header) {
   def readable: String = s"%$id = ${header.version}.${Packet.opNames(header.tp)}(${packets.mkString(", ")})"
   def evaluate: Long = {
     val elems = packets.map(_.evaluate)
@@ -56,11 +56,11 @@ object Packet {
     '8' -> "1000", '9' -> "1001", 'A' -> "1010", 'B' -> "1011",
     'C' -> "1100", 'D' -> "1101", 'E' -> "1110", 'F' -> "1111")
 
-  def parse(x: Bits): Seq[Packet] = {
+  def parse(x: Bits): mutable.Seq[Packet] = {
     var pos: Int = 0
     def parseBool(): Boolean = { val value = x.charAt(pos) == '1'; pos += 1; value }
     def rawBits(n: Int): Bits = { val value = x.substring(pos, pos + n); pos += n; value }
-    def parseInt(n: Int): Long = BigInt(rawBits(n), 2).longValue()
+    def parseInt(n: Int): Long = BigInt(rawBits(n), 2).longValue
 
     def done(builder: PacketBuilder): Boolean = {
       if (builder.byPacketCount) builder.packets.size >= builder.end else pos >= builder.end
@@ -95,7 +95,7 @@ object Packet {
           var continue = true
           val bits = new mutable.StringBuilder
           while (continue) { continue = parseBool(); bits ++= rawBits(4) }
-          val packet = Literal(header, BigInt(bits.mkString, 2).longValue())
+          val packet = Literal(header, BigInt(bits.mkString, 2).longValue)
           finishPacket(packet)
         } else {
           val byPacketCount = parseBool()

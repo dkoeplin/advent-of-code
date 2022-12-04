@@ -35,7 +35,7 @@ object Day12 extends App {
     out.close()
   }
 
-  def dfs(part2: Boolean): Seq[Seq[Int]] = {
+  def dfs(part2: Boolean): mutable.Seq[Seq[Int]] = {
     val paths = mutable.Buffer.empty[Seq[Int]]
     val frontier = mutable.Buffer[(Int, Seq[Int])]((start, Nil))
     while (frontier.nonEmpty) {

@@ -1,6 +1,7 @@
 package common.mutable
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 class Matrix[T](vs: Iterator[Iterable[T]]) {
   val data: Array[mutable.Seq[T]] = vs.map{vs => mutable.Seq.empty[T] ++ vs }.toArray
@@ -20,7 +21,7 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
     }
   )
 
-  def sum(implicit num: Numeric[T]): T = data.map(_.reduce(num.plus)).reduce(num.plus)
+  def sum(implicit num: Numeric[T], ct: ClassTag[T]): T = data.map(_.reduce(num.plus)).reduce(num.plus)
 
   override def toString: String = data.map{vs => vs.map{x => Matrix.digit(x)}.mkString("")}.mkString("\n")
 }
