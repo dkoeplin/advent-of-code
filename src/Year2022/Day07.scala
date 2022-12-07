@@ -37,8 +37,6 @@ object Day07 extends App {
   worklist = "/" +: worklist
   while (worklist.nonEmpty) {
     val current = worklist.head
-    if (sizes.contains(current))
-      worklist = worklist.tail
     val dir = structure.dirs.getOrElse(current, Directory(Nil, Nil))
     val pend = dir.dirs.filterNot(sizes.contains)
     if (pend.isEmpty) {
