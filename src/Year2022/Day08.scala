@@ -18,7 +18,7 @@ object Day08 extends App {
     }
   }
 
-  val file = scala.io.Source.fromFile("data/full/08")
+  val file = scala.io.Source.fromFile("data/2022/08")
   val data = common.mutable.Matrix[Int](file.getLines().map(_.map(_ - '0')))
   def scan(i: Int, dir: Dir.Dir): Set[Pos] = {
     var max: Int = -1

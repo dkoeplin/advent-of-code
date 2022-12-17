@@ -3,7 +3,7 @@ package Year2022
 object Day03 extends App {
   def priority(x: Char) = if (x.isLower) x - 'a' + 1 else x - 'A' + 27
 
-  val file = scala.io.Source.fromFile("data/full/03")
+  val file = scala.io.Source.fromFile("data/2022/03")
   val lines = file.getLines().toArray
   val part1 = lines.map{line =>
     val c1 = line.substring(0, line.length/2).toSet

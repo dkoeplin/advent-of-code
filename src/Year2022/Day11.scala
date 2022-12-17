@@ -60,7 +60,7 @@ object Monkey {
 
 object Day11 extends App {
   def rounds(n: Int)(divide: Array[Monkey] => (Long => Long)): Unit = {
-    val file = scala.io.Source.fromFile("data/full/11")
+    val file = scala.io.Source.fromFile("data/2022/11")
     val lines = file.getLines()
     val monkeys: Array[Monkey] = Monkey.parseAll(lines)
     val divider = divide(monkeys)

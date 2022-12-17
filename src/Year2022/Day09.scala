@@ -16,7 +16,7 @@ object Day09 extends App {
 
   case class State(chain: List[Pos], visited: Set[Pos])
 
-  val file = scala.io.Source.fromFile("data/full/09")
+  val file = scala.io.Source.fromFile("data/2022/09")
   val lines = file.getLines().toArray
 
   def move(head: Pos, tail: Pos) = {

@@ -12,5 +12,5 @@ object Day15 extends App {
     }.getOrElse(throw new Exception(s"Unable to parse $line"))
   }
 
-  val file =
+  val file = scala.io.Source.fromFile("example/2022/15")
 }
