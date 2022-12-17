@@ -10,6 +10,7 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def get(i: Int, j: Int): Option[T] = if (i >= 0 && i < rows && j >= 0 && j < cols) { Some(data(i)(j)) } else None
   def get(pos: Pos): Option[T] = get(pos.row, pos.col)
   def getOrElse(i: Int, j: Int, default: => T): T = get(i, j).getOrElse(default)
+  def getOrElse(pos: Pos, default: => T): T = get(pos).getOrElse(default)
   def apply(i: Int, j: Int): T = data(i)(j)
   def apply(pos: Pos): T = data(pos.row)(pos.col)
   def update(i: Int, j: Int, value: T): Unit = if (i >= 0 && i < rows && j >= 0 && j < cols) { data(i)(j) = value }
@@ -33,6 +34,9 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
 }
 object Matrix {
   def apply[T](vs: Iterator[Iterable[T]]): Matrix[T] = new Matrix(vs)
+  def empty[T](rows: Int, cols: Int, default: T): Matrix[T] = new Matrix((0 until rows).iterator.map{i =>
+    Iterable.fill(cols)(default)
+  })
   def digit[T](x: T): String = x match {
     case x: Int => val str = Integer.toHexString(x); if (str.length > 1) "N" else str
     case _ => x.toString
