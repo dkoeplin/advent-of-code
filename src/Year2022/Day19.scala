@@ -1,12 +1,15 @@
 package Year2022
 
 object Day19 extends App {
-  class Resources(items: Iterable[(Resource.Type, Double)]) {
-    val map: Map[Resource.Type, Double] = Map.empty ++ items
-    def apply(t: Resource.Type): Double = map.getOrElse(t, 0)
+  class Resources(items: Iterable[(Resource.Type, Int)]) {
+    val map: Map[Resource.Type, Int] = Map.empty ++ items
+    def apply(t: Resource.Type): Int = map.getOrElse(t, 0)
     def +(rhs: Resources): Resources = new Resources((map.keys ++ rhs.map.keys).map{k => k -> (this(k) + rhs(k)) })
     def -(rhs: Resources): Resources = new Resources((map.keys ++ rhs.map.keys).map{k => k -> (this(k) - rhs(k)) })
     def >=(rhs: Resources): Boolean = rhs.map.forall{case (k,n) => this(k) >= n }
+    def >(rhs: Resources): Boolean = rhs.map.forall{case (k,n) => this(k) > n }
+    def ==(rhs: Resources): Boolean = (map.keys ++ rhs.map.keys).forall{k => this(k) == rhs(k) }
+    def !=(rhs: Resources): Boolean = !(this == rhs)
 
     override def toString: String = items.filter(_._2 != 0).map{case (k, n) => s"$k=${n}"}.mkString("{", ", ", "}")
   }
@@ -18,7 +21,7 @@ object Day19 extends App {
     val Geode = Value("Geode")
   }
   object Resources {
-    def apply(items: (Resource.Type, Double)*): Resources = new Resources(items)
+    def apply(items: (Resource.Type, Int)*): Resources = new Resources(items)
     def empty: Resources = new Resources(Nil)
   }
 
@@ -34,37 +37,47 @@ object Day19 extends App {
     }
   }
 
+  case class Action(a: Option[Resource.Type]) {
+    override def toString: String = a.map(_.toString.substring(0, 1)).getOrElse("W")
+  }
+
   def accel(v: Resources, blueprint: Map[Resource.Type, Resources], verbose: Boolean = false): Resources
     = new Resources(blueprint.map{case (t, cost) => t -> Math.min(1, cost.map.keys.map{r => v(r) / cost(r) }.min)}.toSeq)
 
-  case class State(x: Resources, v: Resources, t: Int, maxT: Int) {
-    def nothing(): State = State(x + v, v, t + 1, maxT)
-    def build(m: (Resource.Type,Resources)): State = State(x - m._2 + v, v + Resources(m._1 -> 1), t+1, maxT)
-    def expected(blueprint: Map[Resource.Type, Resources], verbose: Boolean = false): Double = (t to maxT).foldLeft(this){(state, t) =>
-      val v = state.v
-      val a = accel(v, blueprint)
-      if (verbose) println(s"t=$t x=${state.x} v=${state.v} a=${a}")
-      State(state.x + v, v + a, state.t + 1, state.maxT)
-    }.x(Resource.Geode)
+  case class State(x: Resources, v: Resources, maxT: Int, actions: Array[Action]) {
+    def nothing(): State = State(x + v, v, maxT, actions :+ Action(None))
+    def build(tp: Resource.Type, cost: Resources): State = State(x - cost + v, v + Resources(tp -> 1), maxT, actions :+ Action(Some(tp)))
   }
-  def maxGeodes(blueprint: Map[Resource.Type, Resources], maxT: Int): Double = {
-    (1 to maxT).foldLeft(State(x=Resources.empty, v=Resources(Resource.Ore -> 1), t=1, maxT)){(state, t) =>
+  object State {
+    def initial(maxT: Int): State = State(Resources.empty, Resources(Resource.Ore -> 1), maxT, Array.empty)
+  }
+  def playback(actions: Seq[Action], blueprint: Map[Resource.Type, Resources]): Int = {
+    (1 to actions.length).foldLeft(State.initial(actions.length)){(state, t) =>
       println(s"== Minute $t ==")
-      val expect = state.expected(blueprint)
-      println(s"  x=${state.x} v=${state.v} e=$expect")
-      val action = blueprint.filter{b => state.x >= b._2}.map{b =>
-        val e = state.build(b).expected(blueprint)
-        println(s"    Could build ${b._1} robot: E[g] = $e")
-        (b, e)
-      }.filter(_._2 > expect).maxByOption(_._2).map(_._1)
-      action.map{x =>
-        println(s"  Build ${x._1} robot for ${x._2}")
-        state.build(x)
-      }.getOrElse {
-        println(s"  Wait")
-        state.nothing()
+      println(s"  x=${state.x} v=${state.v}")
+      actions(t - 1).a match {
+        case Some(t) =>
+          println(s"  Build $t robot for ${blueprint(t)}")
+          state.build(t, blueprint(t))
+        case None =>
+          println(s"  Wait")
+          state.nothing()
       }
-    }.x(Resource.Geode)
+    }
+  }.x(Resource.Geode)
+
+  def maxGeodes(blueprint: Map[Resource.Type, Resources], maxT: Int): State = {
+    (1 to maxT).foldLeft(Seq(State.initial(maxT))){(states, t) => {
+      val next = states.flatMap{state =>
+        blueprint.filter{b => state.x >= b._2 }.map{b => state.build(b._1, b._2) }.toSeq :+ state.nothing()
+      }
+      implicit val ordering: Ordering[Resources] = new Ordering[Resources]{
+        def compare(a: Resources, b: Resources): Int = if (a > b) 1 else if (a == b) 0 else -1
+      }
+      val pruned = next.groupBy(_.v).view.mapValues{states => states.maxBy(_.x) }.values
+      println(s"T=$t (next: ${next.length}, pruned: ${pruned.size})")
+      pruned.toSeq
+    }}.maxBy(_.x(Resource.Geode))
   }
 
   val file = scala.io.Source.fromFile("example/2022/19")
@@ -76,6 +89,7 @@ object Day19 extends App {
   //System.exit(0)
 
   blueprints.zipWithIndex.foreach{case (blueprint, i) =>
-    println(s"$i: ${maxGeodes(blueprint, maxT)}")
+    val end = maxGeodes(blueprint, maxT)
+    println(s"$i: ${end.actions.mkString("")}: ${end.x(Resource.Geode)}")
   }
 }
