@@ -1,6 +1,4 @@
 *.class
 *.log
-/data/
 /.idea/
-/example/
 /out/
