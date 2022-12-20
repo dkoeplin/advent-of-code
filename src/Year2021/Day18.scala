@@ -217,7 +217,7 @@ object Day18 extends App {
   testMagnitude("[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]", 3488L)
   assert(magnitudePassed, "Failed magnitude tests")
 
-  val file = scala.io.Source.fromFile("./data/18")
+  val file = scala.io.Source.fromFile("./data/18.2")
   val nums = file.getLines().map{case Pair(pair) => pair}.toArray
   val part1 = nums.reduceLeft{_+_}
   println(s"  Part 1 (Sum): $part1")
