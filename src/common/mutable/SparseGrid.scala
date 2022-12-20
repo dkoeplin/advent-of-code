@@ -5,17 +5,15 @@ import common.Pos
 case class SparseGrid[T](default: T) {
   def apply(i: Int, j: Int): T = map.getOrElse(Pos(i, j), default)
   def apply(x: Pos): T = map.getOrElse(x, default)
-  def update(x: Pos, value: T): Unit = map(x) = value
-  def update(i: Int, j: Int, value: T): Unit = map(Pos(i, j)) = value
+  def update(x: Pos, value: T): Unit = {
+    min = min.map(_ min x).orElse(Some(x))
+    max = max.map(_ max x).orElse(Some(x))
+    map(x) = value
+  }
+  def update(i: Int, j: Int, value: T): Unit = update(Pos(i, j), value)
 
-  def start(): Pos = {
-    val min = map.keys.reduceLeft{(a, b) => a min b }
-    Pos(Math.min(min.row, minY.getOrElse(min.row)), Math.min(min.col, minX.getOrElse(min.col)))
-  }
-  def end(): Pos = {
-    val max = map.keys.reduceLeft{(a, b) => a max b }
-    Pos(Math.max(max.row, maxY.getOrElse(max.row)), Math.max(max.col, maxX.getOrElse(max.col)))
-  }
+  def start(): Pos = min.get
+  def end(): Pos = max.get
 
   override def toString: String = {
     val min = start()
@@ -30,9 +28,9 @@ case class SparseGrid[T](default: T) {
     ss.mkString
   }
 
+  def keys: Iterator[Pos] = map.keysIterator
+
   private val map = scala.collection.mutable.Map.empty[Pos, T]
-  var minX: Option[Int] = None
-  var minY: Option[Int] = None
-  var maxX: Option[Int] = None
-  var maxY: Option[Int] = None
+  private var min: Option[Pos] = None
+  private var max: Option[Pos] = None
 }

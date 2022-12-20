@@ -9,7 +9,6 @@ object Day14 extends App {
     Pos(pair(1).toInt, pair(0).toInt) // pair is x, y, matrix uses y, x
   }}.toArray
   val grid = SparseGrid[Char]('.')
-  grid.minY = Some(0)
   paths.foreach{path => path.sliding(2).foreach{pair =>
     // defines an area, but each path is actually a line in practice
     val stepy = if (pair(1).row >= pair(0).row) 1 else -1
@@ -59,7 +58,6 @@ object Day14 extends App {
   println(s"Part1: $part1")
 
   println("== Part 2 ==")
-  grid.maxY = Some(maxY + 1)
   val part2 = flood(floor=Some(maxY + 2))
   //val min = grid.start()
   //val max = grid.end()
