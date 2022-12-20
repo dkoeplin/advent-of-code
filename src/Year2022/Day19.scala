@@ -4,11 +4,11 @@ object Day19 extends App {
   class Resources(items: Iterable[(Resource.Type, Int)]) {
     val map: Map[Resource.Type, Int] = Map.empty ++ items
     def apply(t: Resource.Type): Int = map.getOrElse(t, 0)
-    def +(rhs: Resources): Resources = new Resources((map.keys ++ rhs.map.keys).map{k => k -> (this(k) + rhs(k)) })
-    def -(rhs: Resources): Resources = new Resources((map.keys ++ rhs.map.keys).map{k => k -> (this(k) - rhs(k)) })
-    def >=(rhs: Resources): Boolean = rhs.map.forall{case (k,n) => this(k) >= n }
-    def >(rhs: Resources): Boolean = rhs.map.forall{case (k,n) => this(k) > n }
-    def ==(rhs: Resources): Boolean = (map.keys ++ rhs.map.keys).forall{k => this(k) == rhs(k) }
+    def +(rhs: Resources): Resources = new Resources(Resource.all.map{k => k -> (this(k) + rhs(k)) })
+    def -(rhs: Resources): Resources = new Resources(Resource.all.map{k => k -> (this(k) - rhs(k)) })
+    def >=(rhs: Resources): Boolean = Resource.all.forall{k => this(k) >= rhs(k) }
+    def >(rhs: Resources): Boolean = Resource.all.forall{k => this(k) > rhs(k) }
+    def ==(rhs: Resources): Boolean = Resource.all.forall{k => this(k) == rhs(k) }
     def !=(rhs: Resources): Boolean = !(this == rhs)
 
     override def toString: String = items.filter(_._2 != 0).map{case (k, n) => s"$k=${n}"}.mkString("{", ", ", "}")
@@ -19,6 +19,7 @@ object Day19 extends App {
     val Clay = Value("Clay")
     val Obsidian = Value("Obsidian")
     val Geode = Value("Geode")
+    val all = Seq(Ore, Clay, Obsidian, Geode)
   }
   object Resources {
     def apply(items: (Resource.Type, Int)*): Resources = new Resources(items)
@@ -42,7 +43,7 @@ object Day19 extends App {
   }
 
   def accel(v: Resources, blueprint: Map[Resource.Type, Resources], verbose: Boolean = false): Resources
-    = new Resources(blueprint.map{case (t, cost) => t -> Math.min(1, cost.map.keys.map{r => v(r) / cost(r) }.min)}.toSeq)
+    = new Resources(blueprint.map{case (t, cost) => t -> Math.min(1, Resource.all.map{r => v(r) / cost(r) }.min)})
 
   case class State(x: Resources, v: Resources, maxT: Int, actions: Array[Action]) {
     def nothing(): State = State(x + v, v, maxT, actions :+ Action(None))
