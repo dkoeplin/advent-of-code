@@ -3,7 +3,7 @@ package Year2022
 object Day20 extends App {
   def gather(a: Array[Long], map: Map[Int,Int]): Array[Long] = {
     val b = Array.fill(a.length)(0L)
-    map.foreach{case (i, i3) => b(i3) = a(i) }
+    a.indices.foreach{i => b(map.getOrElse(i, i)) = a(i) }
     b
   }
   def move(x: Long, i: Int, length: Int): Int = {
@@ -22,28 +22,59 @@ object Day20 extends App {
   assert(move(205, 4, 7) == 5)
   assert(move(-93, 6, 7) == 3)
 
+  case class Mapping(forward: Map[Int, Int] = Map.empty, backward: Map[Int, Int] = Map.empty) {
+    def add(i: Int, i2: Int) = Mapping(forward + (i -> i2), backward + (i2 -> i))
+    def remap(i2: Int, i3: Int) = add(bwd(i2), i3)
+    def fwd(i: Int): Int = forward.getOrElse(i, i)
+    def bwd(i2: Int): Int = backward.getOrElse(i2, i2)
+  }
   def mix(a: Array[Long], n: Int, verbose: Boolean = false): Array[Long] = {
-    if (verbose) println(a.mkString(" "))
-    val map = (0 until n).foldLeft(Map.empty[Int,Int]){(map, iter) =>
-      println(s"Mixing #$iter")
-      a.indices.iterator.foldLeft(map) { (map, i) =>
-        val i2 = map.getOrElse(i, i)
+    val map = (0 until n).foldLeft(Mapping()){(map, iter) =>
+      val map2 = a.indices.iterator.foldLeft(map){(map, i) =>
+        val i2 = map.fwd(i)
         val i3 = move(a(i), i2, a.length)
         val min = Math.min(i2, i3)
         val max = Math.max(i2, i3)
-        val map2 = a.indices.iterator.map { j =>
-          val j3 = map.getOrElse(j, j)
-          if (i == j) i -> i3
-          else if (j3 >= min && j3 <= max && i2 < i3) j -> (j3 - 1)
-          else if (j3 >= min && j3 <= max && i3 < i2) j -> (j3 + 1)
-          else j -> j3
-        }.toMap
-        if (verbose) println(s"Move ${a(i)} from $i2 to $i3: ${gather(a, map2).mkString(" ")}")
+        val dir = if (i2 > i3) -1 else 1
+        val map2 = (i2 until i3 by dir).foldLeft(map){(map, j2) => map.remap(j2 + dir, j2) }.add(i, i3)
+        if (verbose) {
+          println(s"Move ${a(i)} from $i2 to $i3: ${gather(a, map2.forward).mkString(" ")}")
+          println(s"  Mapping: ${map2.forward.map{case (i,i2) => s"$i -> $i2"}.mkString(" ")}")
+        }
         map2
       }
+      // println(s"#$iter: ${gather(a, map2.forward).mkString(" ")}")
+      map2
     }
-    gather(a, map)
+    gather(a, map.forward)
   }
+
+  def mix2(a: Array[Long], n: Int, verbose: Boolean = false): Array[Long] = {
+    val array = a.clone
+    val fwd = scala.collection.mutable.Map.empty[Int, Int] ++ array.indices.map{i => (i -> i)}
+    val bwd = scala.collection.mutable.Map.empty[Int, Int] ++ array.indices.map{i => (i -> i)}
+    def relocate(i2: Int, i3: Int): Unit = {
+      array(i3) = array(i2)
+      val i = bwd(i2)
+      fwd(i) = i3
+      bwd(i3) = i
+    }
+    (0 until n).foreach{n =>
+      a.indices.iterator.foreach{i =>
+        val i2 = fwd(i)
+        val x = array(i2)
+        val i3 = move(x, i2, a.length)
+        if (i2 < i3) (i2 until i3).foreach{j2 => relocate(j2 + 1, j2) }
+        else if (i2 > i3) (i2 until i3 by -1).foreach{j2 => relocate(j2 - 1, j2) }
+        fwd(i) = i3
+        bwd(i3) = i
+        array(i3) = x
+      }
+      // println(s"#${n+1}: ${array.mkString(" ")}")
+    }
+    array
+  }
+
   def coord(a: Array[Long]): Long = {
     val idx0 = a.indexOf(0)
     (1000 to 3000 by 1000).map{i => a((idx0 + i) % a.length) }.sum
@@ -51,8 +82,13 @@ object Day20 extends App {
 
   val file = scala.io.Source.fromFile("data/2022/20")
   val nums = file.getLines().map(_.toLong).toArray
-  val part1 = coord(mix(nums, n=1))
-  println(s"Part1: $part1")
-  val part2 = coord(mix(nums.map(_ * 811589153), n=10))
-  println(s"Part2: $part2")
+  val start1 = System.currentTimeMillis()
+  println(s"Part1: ${coord(mix(nums, n=1))}")
+  println(s"Part2: ${coord(mix(nums.map(_ * 811589153L), n=10))}")
+  println(s"Functional: ${System.currentTimeMillis() - start1} ms")
+
+  val start2 = System.currentTimeMillis()
+  println(s"Part1: ${coord(mix2(nums, n=1))}")
+  println(s"Part2: ${coord(mix2(nums.map(_ * 811589153L), n=10))}")
+  println(s"Imperative: ${System.currentTimeMillis() - start2} ms")
 }
