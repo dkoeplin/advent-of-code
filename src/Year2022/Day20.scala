@@ -30,21 +30,12 @@ object Day20 extends App {
   }
   def mix(a: Array[Long], n: Int, verbose: Boolean = false): Array[Long] = {
     val map = (0 until n).foldLeft(Mapping()){(map, iter) =>
-      val map2 = a.indices.iterator.foldLeft(map){(map, i) =>
+      a.indices.iterator.foldLeft(map){(map, i) =>
         val i2 = map.fwd(i)
         val i3 = move(a(i), i2, a.length)
-        val min = Math.min(i2, i3)
-        val max = Math.max(i2, i3)
         val dir = if (i2 > i3) -1 else 1
-        val map2 = (i2 until i3 by dir).foldLeft(map){(map, j2) => map.remap(j2 + dir, j2) }.add(i, i3)
-        if (verbose) {
-          println(s"Move ${a(i)} from $i2 to $i3: ${gather(a, map2.forward).mkString(" ")}")
-          println(s"  Mapping: ${map2.forward.map{case (i,i2) => s"$i -> $i2"}.mkString(" ")}")
-        }
-        map2
+        (i2 until i3 by dir).foldLeft(map){(map, j2) => map.remap(j2 + dir, j2) }.add(i, i3)
       }
-      // println(s"#$iter: ${gather(a, map2.forward).mkString(" ")}")
-      map2
     }
     gather(a, map.forward)
   }
@@ -64,13 +55,12 @@ object Day20 extends App {
         val i2 = fwd(i)
         val x = array(i2)
         val i3 = move(x, i2, a.length)
-        if (i2 < i3) (i2 until i3).foreach{j2 => relocate(j2 + 1, j2) }
-        else if (i2 > i3) (i2 until i3 by -1).foreach{j2 => relocate(j2 - 1, j2) }
+        val dir = if (i2 > i3) -1 else 1
+        (i2 until i3 by dir).foreach{j2 => relocate(j2 + dir, j2) }
         fwd(i) = i3
         bwd(i3) = i
         array(i3) = x
       }
-      // println(s"#${n+1}: ${array.mkString(" ")}")
     }
     array
   }
