@@ -159,7 +159,7 @@ object Day19 extends App {
   val file = scala.io.Source.fromFile("data/2022/19")
   val blueprints = file.getLines().map(Blueprint.parse).toArray
 
-  def part1 = blueprints.zipWithIndex.map{case (blueprint, i) =>
+  val part1 = blueprints.zipWithIndex.map{case (blueprint, i) =>
     val end = maxGeodes(blueprint, maxT = 24)
     //playback(end.actions, blueprint)
     println(s"${i+1}: ${end.actions.mkString("")}: ${end.x(Resource.Geode)}")
@@ -168,7 +168,7 @@ object Day19 extends App {
     //println("            012345678901234")
     (i + 1) * end.x(Resource.Geode)
   }.sum
-  //println(s"Part1: $part1")
+  println(s"Part1: $part1")
   //times.foreach{case (label,time) => println(s"$label: $time ms") }
 
   val part2 = blueprints.take(3).zipWithIndex.map{case (blueprint, i) =>
