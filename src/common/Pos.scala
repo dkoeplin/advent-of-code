@@ -1,11 +1,20 @@
 package common
 
 case class Pos(row: Int, col: Int) {
+  def *(n: Int): Pos = Pos(row * n, col * n)
   def +(rhs: Pos): Pos = Pos(row + rhs.row, col + rhs.col)
   def -(rhs: Pos): Pos = Pos(row - rhs.row, col - rhs.col)
 
   def max(rhs: Pos): Pos = Pos(Math.max(row, rhs.row), Math.max(col, rhs.col))
   def min(rhs: Pos): Pos = Pos(Math.min(row, rhs.row), Math.min(col, rhs.col))
+
+  def to(rhs: Pos): Iterator[Pos] = {
+    val stepRow = if (row <= rhs.row) 1 else -1
+    val stepCol = if (col <= rhs.col) 1 else -1
+    (row to rhs.row by stepRow).iterator.flatMap{i =>
+      (col to rhs.col by stepCol).iterator.map{j => Pos(i, j) }
+    }
+  }
 }
 object Pos {
   // \ | /
