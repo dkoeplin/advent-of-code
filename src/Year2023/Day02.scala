@@ -19,8 +19,7 @@ object Day02 extends Year2023(2) {
     def unapply(x: String): Option[Round] = Some(new Round(
       x.split(',').iterator
         .map(_.trim.split(' '))
-        .collect { case Array(n, Color(c)) => (c, n.toInt) }
-        .toArray.groupBy(_._1).view.mapValues(_.map(_._2).sum).toMap
+        .collect{case Array(n, Color(c)) => (c, n.toInt) }.toMap
     ))
   }
 
