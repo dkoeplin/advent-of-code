@@ -28,4 +28,10 @@ object Pos {
   val UP_RIGHT: Pos = UP + RIGHT
   val DOWN_LEFT: Pos = DOWN + LEFT
   val DOWN_RIGHT: Pos = DOWN + RIGHT
+
+  // All non-diagonal deltas
+  val nondiag: List[Pos] = List(DOWN, UP, LEFT, RIGHT)
+
+  /// All position deltas
+  val all: List[Pos] = List(DOWN, UP, LEFT, RIGHT, UP_LEFT, UP_RIGHT, DOWN_LEFT, DOWN_RIGHT)
 }
