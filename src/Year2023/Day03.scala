@@ -13,10 +13,12 @@ object Day03 extends Year2023(3) {
     } ++ Seq(Pos(start.row, start.col - 1), Pos(start.row, start.col + len))
   }
   case class Symbol(value: Char, start: Pos) extends Feature { def len: Int = 1 }
+  // A symbol is any non-digit that isn't a period
   implicit class CharMethods(x: Char) { def isSymbol: Boolean = !x.isDigit && x != '.' }
 
   case class Number(value: Long, start: Pos, len: Int) extends Feature
 
+  // Memoize the position of numbers and symbols in two sets
   val (numbers, symbols) = data.getLines().zipWithIndex
                                     .foldLeft((Set.empty[Number], Set.empty[Symbol])){case ((nums, syms), (line, i)) =>
     val symbols = line.iterator.zipWithIndex.filter(_._1.isSymbol).map{case (c,j) => Symbol(c, Pos(i, j)) }
@@ -26,10 +28,12 @@ object Day03 extends Year2023(3) {
     (nums ++ numbers, syms ++ symbols)
   }
 
-  val part1 = numbers.iterator.filter(_.surrounding.exists(x => symbols.exists(_.start == x))).map(_.value).sum
+  // All numbers with at least one adjacent symbol
+  val part1 = numbers.iterator.filter(_.surrounding.exists(x => symbols.exists(_.start == x)))
+                              .map(_.value).sum
   println(s"Part 1: $part1")
 
-  // ~O(1) lookup from Pos to Number (basically a sparse matrix)
+  // All * symbols with exactly two adjacent numbers
   val numMap: Map[Pos, Number] = numbers.flatMap{n => n.posList.map{p => p -> n}}.toMap
   val part2 = symbols.iterator.filter(_.value == '*').flatMap{sym =>
     val adjacent = sym.surrounding.flatMap(numMap.get).toSet
