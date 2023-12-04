@@ -19,7 +19,7 @@ object Day04 extends Year2023(4) {
     val copies = if (repeats.isEmpty) 1 else repeats.head
     // Not super elegant, but this is just previously known copies + new copies
     val repeats2 = Array.tabulate(math.max(repeats.length - 1, card.matching)){j =>
-      (if (repeats.length > j + 1) repeats(j + 1) else 1) + (if (j < card.matching) copies else 0)
+      repeats.applyOrElse(j + 1, {_: Int => 1}) + (if (j < card.matching) copies else 0)
     }
     (repeats2, n + copies)
   }
