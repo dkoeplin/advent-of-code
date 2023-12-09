@@ -34,12 +34,12 @@ object Day08 extends Year2023(8) {
     }
     def timeToFirst: Long = if (delay == 0) period else delay
   }
-  case class Matches(bursts: Set[Long], cycles: List[Cycle]) {
+  case class Matches(singles: Set[Long], cycles: List[Cycle]) {
     def sync(rhs: Matches): Matches = Matches(
-      bursts = bursts.intersect(rhs.bursts),
+      singles = singles.intersect(rhs.singles),
       cycles = cycles.iterator.flatMap{c0 => rhs.cycles.flatMap{c1 => c0.sync(c1) }}.toList
     )
-    def timeToFirst: Long = (bursts.iterator ++ cycles.map(_.timeToFirst)).min
+    def timeToFirst: Long = (singles.iterator ++ cycles.map(_.timeToFirst)).min
   }
 
   def findCycle(start: String)(target: String => Boolean): Matches = {
@@ -57,11 +57,10 @@ object Day08 extends Year2023(8) {
     val period = step - setup
     val (before, during) = visited.iterator.collect{case ((node,_),step) if target(node) => (node,step) }
                                   .partition(_._2 < setup)
-    val singles = before.map(_._2).toSet
-    val cycles = during.map(_._2).map{step => Cycle(step, period) }.toList
-    val matches = Matches(singles, cycles)
-    println(s"Path length: $matches (start: $start, x: $x)")
-    matches
+    Matches (
+      singles = before.map(_._2).toSet,
+      cycles = during.map(_._2).map{step => Cycle(step, period) }.toList
+    )
   }
 
   val lines = data.getLines()
