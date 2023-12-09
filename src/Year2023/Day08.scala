@@ -59,7 +59,9 @@ object Day08 extends Year2023(8) {
                                   .partition(_._2 < setup)
     Matches (
       singles = before.map(_._2).toSet,
-      cycles = during.map(_._2).map{step => Cycle(step, period) }.toList
+      cycles = during.map(_._2).map{step =>
+        if (step == period) Cycle(0, period) else Cycle(step, period)
+      }.toList
     )
   }
 
@@ -73,6 +75,6 @@ object Day08 extends Year2023(8) {
 
   val part2 = map.keysIterator.filter(_.endsWith("A"))
                  .map{k => findCycle(k)(_.endsWith("Z")) }
-                 .reduce{_ sync _ }.timeToFirst
+                 .reduce{_ sync _}.timeToFirst
   println(s"Part 2: $part2")
 }
