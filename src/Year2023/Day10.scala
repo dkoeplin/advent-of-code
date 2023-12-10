@@ -11,7 +11,7 @@ object Day10 extends Year2023(10) {
     'J' -> Seq(Pos.UP, Pos.LEFT),
     '7' -> Seq(Pos.DOWN, Pos.LEFT),
     'F' -> Seq(Pos.DOWN, Pos.RIGHT),
-    'S' -> Nil,
+    'S' -> Nil, // This one has to be discovered per diagram
     '.' -> Nil
   )
 
@@ -26,19 +26,23 @@ object Day10 extends Year2023(10) {
   case class Diagram(iter: Iterator[Iterable[Char]]) extends Matrix[Char](iter) {
     val start: Pos = find(_ == 'S').get
     private val types: Map[Char, Seq[Pos]] = {
-      val next = Pos.nondiag.filter { d => pipeNeighbors(d + start, pipes).contains(start) }
+      val next = Pos.nondiag.filter{d => pipeNeighbors(d + start, pipes).contains(start) }
       pipes ++ Seq('S' -> next)
     }
 
+    // Returns an iterator over connected pipe neighbors.
     private def pipeNeighbors(pos: Pos, types: Map[Char, Seq[Pos]] = types): Iterator[Pos] = get(pos).map{c =>
       types(c).iterator.map(_ + pos).filter(this.contains)
     }.getOrElse(Iterator.empty)
 
+    // Returns an iterator over horizontal/vertical neighbors that are ground (.) tiles.
     private def emptyNeighbors(pos: Pos): Iterator[Pos] =
       Pos.nondiag.iterator.map(_ + pos).filter{p => get(p).contains('.') }
 
+    // True if any horizontal or vertical neighbor of this tile is outside the diagram
     private def isOutside(pos: Pos): Boolean = Pos.nondiag.exists{d => !contains(pos + d) }
 
+    // Returns all tiles that are connected to the start tile based on the 'next' function.
     private def connected(start: Pos)(next: Pos => Iterator[Pos]): Set[Pos] = {
       case class State(frontier: List[Pos], nodes: Set[Pos])
       LazyList.iterate(State(List(start), Set(start))){case State(frontier, nodes) =>
@@ -51,7 +55,10 @@ object Day10 extends Year2023(10) {
 
     lazy val part1: Int = (cycle.size + 1) / 2
 
-    def expand(): Diagram = Diagram((0 until 2 * rows).iterator.map { i =>
+    // Returns an expanded diagram twice the current size, making sure to keep pipes connected.
+    // Keeps only the pipes that belong to the starting cycle.
+    // This exposes "paths" between pipes to more easily detect whether a tile is truly inside the cycle.
+    def expand(): Diagram = Diagram((0 until 2 * rows).iterator.map{i =>
       (0 until 2 * cols).map { j =>
         val original = Pos(i / 2, j / 2)
         val inCycle = cycle.contains(original)
@@ -64,7 +71,8 @@ object Day10 extends Year2023(10) {
       }
     })
 
-    private def classifyEmpty(): Nodes = {
+    // Classifies tiles as either "inside" or "outside" the main cycle.
+    private def classifyTiles(): Nodes = {
       case class State(frontier: List[Pos], nodes: Nodes = Nodes())
       val frontier = cycle.flatMap(emptyNeighbors).toList
       LazyList.iterate(State(frontier)){state =>
@@ -81,7 +89,7 @@ object Day10 extends Year2023(10) {
 
     lazy val part2: Int = {
       def isOriginal(x: Pos): Boolean = x.row % 2 == 0 && x.col % 2 == 0
-      expand().classifyEmpty().inside.count(isOriginal)
+      expand().classifyTiles().inside.count(isOriginal)
     }
   }
 
