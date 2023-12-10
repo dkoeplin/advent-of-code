@@ -1,11 +1,11 @@
-package common.mutable
+package common.immutable
 
 import common.Pos
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
 class Matrix[T](vs: Iterator[Iterable[T]]) {
-  val data: Array[mutable.Seq[T]] = vs.map{vs => mutable.Seq.empty[T] ++ vs }.toArray
+  val data: Array[Seq[T]] = vs.map{vs => Seq.empty[T] ++ vs }.toArray
   val rows: Int = data.length
   val cols: Int = if (data.nonEmpty) data(0).length else 0
   def get(i: Int, j: Int): Option[T] = if (i >= 0 && i < rows && j >= 0 && j < cols) { Some(data(i)(j)) } else None
@@ -14,10 +14,7 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def getOrElse(pos: Pos, default: => T): T = get(pos).getOrElse(default)
   def apply(i: Int, j: Int): T = data(i)(j)
   def apply(pos: Pos): T = data(pos.row)(pos.col)
-  def update(i: Int, j: Int, value: T): Unit = if (i >= 0 && i < rows && j >= 0 && j < cols) { data(i)(j) = value }
-  def update(i: Int, j: Int, value: Option[T]): Unit = value.foreach{v => update(i, j, v) }
-
-  def update(pos: Pos, value: T): Unit = update(pos.row, pos.col, value)
+  def contains(pos: Pos): Boolean = get(pos).nonEmpty
 
   def indices(): Seq[(Int,Int)] = (0 until rows).flatMap{i => (0 until cols).map{j => (i,j) }}
 
@@ -28,6 +25,19 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
       (0 until cols).map{j => func(i,j) }
     }
   )
+  def mapPos[R](func: Pos => R): Matrix[R] = Matrix(
+    (0 until rows).iterator.map{i =>
+      (0 until cols).map{j => func(Pos(i, j)) }
+    }
+  )
+
+  def follow(start: Pos, delta: Pos): Iterator[Pos] = {
+    val dR = if (delta.row == 0) 1 else delta.row
+    val dC = if (delta.col == 0) 1 else delta.col
+    (start.row to start.row + delta.row by dR).iterator.flatMap{i =>
+      (start.col to start.col + delta.col by dC).iterator.map{j => Pos(i, j) }
+    }
+  }
 
   def find(cond: T => Boolean): Option[Pos] = posIterator().find{p => cond(apply(p)) }
 
