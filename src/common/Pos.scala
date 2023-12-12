@@ -8,6 +8,9 @@ case class Pos(row: Int, col: Int) {
   def max(rhs: Pos): Pos = Pos(Math.max(row, rhs.row), Math.max(col, rhs.col))
   def min(rhs: Pos): Pos = Pos(Math.min(row, rhs.row), Math.min(col, rhs.col))
 
+  // manhattan distance
+  def dist(rhs: Pos): Int = math.abs(row - rhs.row) + math.abs(col - rhs.col)
+
   def to(rhs: Pos): Iterator[Pos] = {
     val stepRow = if (row <= rhs.row) 1 else -1
     val stepCol = if (col <= rhs.col) 1 else -1
