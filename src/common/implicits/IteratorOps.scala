@@ -16,8 +16,4 @@ object IteratorOps {
       (yes + (if (matches) 1 else 0), no + (if (matches) 0 else 1))
     }
   }
-
-  implicit class NestedIteratorOps[T](x: Iterator[Iterator[T]]) {
-    def join(t: T): Iterator[T] = x.next ++ x.flatMap(_ ++ Iterator(t))
-  }
 }
