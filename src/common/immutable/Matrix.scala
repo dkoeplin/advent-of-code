@@ -19,6 +19,16 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def colIndices: Iterator[Int] = (0 until cols).iterator
   def rowIndices: Iterator[Int] = (0 until rows).iterator
 
+  def iterateOverRows(reverse: Boolean = false): Iterator[Iterator[T]]
+    = (0 until rows).iterator.map{i => row(i, reverse) }
+  def iterateOverCols(reverse: Boolean = false): Iterator[Iterator[T]]
+    = (0 until cols).iterator.map{j => col(j, reverse) }
+
+  def row(i: Int, reverse: Boolean = false): Iterator[T]
+    = (if (reverse) (0 until cols).reverseIterator else (0 until cols).iterator).map{j => apply(i, j) }
+  def col(j: Int, reverse: Boolean = false): Iterator[T]
+    = (if (reverse) (0 until rows).reverseIterator else (0 until rows).iterator).map{i => apply(i, j) }
+
   def indices(): Seq[(Int,Int)] = (0 until rows).flatMap{i => (0 until cols).map{j => (i,j) }}
 
   def posIterator(): Iterator[Pos] = (0 until rows).iterator.flatMap{i => (0 until cols).map{j => Pos(i,j) }}
@@ -45,6 +55,10 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def find(cond: T => Boolean): Option[Pos] = posIterator().find{p => cond(apply(p)) }
 
   def sum(implicit num: Numeric[T], ct: ClassTag[T]): T = data.map(_.reduce(num.plus)).reduce(num.plus)
+
+  def t: Iterator[Iterable[T]] = (0 until cols).iterator.map{j =>
+    (0 until rows).map{i => apply(i, j) }
+  }
 
   override def toString: String = data.map{vs => vs.map{x => Matrix.digit(x)}.mkString("")}.mkString("\n")
 }
