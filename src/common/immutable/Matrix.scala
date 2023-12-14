@@ -16,6 +16,9 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def apply(pos: Pos): T = data(pos.row)(pos.col)
   def contains(pos: Pos): Boolean = get(pos).nonEmpty
 
+  def colIndices: Iterator[Int] = (0 until cols).iterator
+  def rowIndices: Iterator[Int] = (0 until rows).iterator
+
   def indices(): Seq[(Int,Int)] = (0 until rows).flatMap{i => (0 until cols).map{j => (i,j) }}
 
   def posIterator(): Iterator[Pos] = (0 until rows).iterator.flatMap{i => (0 until cols).map{j => Pos(i,j) }}
