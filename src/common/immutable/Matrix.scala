@@ -19,6 +19,7 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def colIndices: Iterator[Int] = (0 until cols).iterator
   def rowIndices: Iterator[Int] = (0 until rows).iterator
 
+
   def iterateOverRows(reverse: Boolean = false): Iterator[Iterator[T]]
     = (0 until rows).iterator.map{i => row(i, reverse) }
   def iterateOverCols(reverse: Boolean = false): Iterator[Iterator[T]]

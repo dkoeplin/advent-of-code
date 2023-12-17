@@ -4,6 +4,7 @@ case class Pos(row: Int, col: Int) {
   def *(n: Int): Pos = Pos(row * n, col * n)
   def +(rhs: Pos): Pos = Pos(row + rhs.row, col + rhs.col)
   def -(rhs: Pos): Pos = Pos(row - rhs.row, col - rhs.col)
+  def unary_-(): Pos = Pos(-row, -col)
 
   def max(rhs: Pos): Pos = Pos(Math.max(row, rhs.row), Math.max(col, rhs.col))
   def min(rhs: Pos): Pos = Pos(Math.min(row, rhs.row), Math.min(col, rhs.col))
