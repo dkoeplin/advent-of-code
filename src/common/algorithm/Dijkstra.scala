@@ -1,17 +1,16 @@
 package common.algorithm
 
-case class PathSummary[T](start: T, end: T, dist: Map[T, Int], prev: Map[T, T]) {
+case class PathSummary[T](start: T, dist: Map[T, Int], prev: Map[T, T]) {
   def pathTo(v: T): Iterator[T] = Iterator.iterate(v){v => prev(v) }.takeWhile{v => v != start }
   def distanceTo(v: T): Int = dist(v)
-  def smallestDist: Int = distanceTo(end)
-  def smallestPath: List[T] = pathTo(end).toList.reverse
 }
 
-abstract class Dijkstra[T](start: T, end: T) {
+abstract class Dijkstra[T](start: T) {
   case class Vertex(pos: T, dist: Int) extends Ordered[Vertex] {
     override def compare(rhs: Vertex): Int = implicitly[Ordering[Int]].compare(-dist, -rhs.dist)
   }
 
+  def isEnd(v: T): Boolean
   def next(v: T): Iterator[T]
   def weight(v: T): Int
 
@@ -28,7 +27,7 @@ abstract class Dijkstra[T](start: T, end: T) {
     dist(start) = 0
     while (queue.nonEmpty) {
       val v = queue.dequeue()
-      continue = v.pos != end
+      continue = !isEnd(v.pos)
       if (continue && !visited.contains(v.pos)) {
         visited += v.pos
         next(v.pos).foreach{next =>
@@ -41,6 +40,6 @@ abstract class Dijkstra[T](start: T, end: T) {
         }
       }
     }
-    PathSummary(start, end, dist.toMap, prev.toMap)
+    PathSummary(start, dist.toMap, prev.toMap)
   }
 }
