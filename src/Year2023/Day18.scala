@@ -6,6 +6,24 @@ import common.immutable.Matrix
 import common.implicits.OptionOps._
 
 object Day18 extends Year2023(18) {
+  abstract class Border {
+    def diff(r: Rectangle): List[Border]
+    def diff(r: Set[Rectangle]): List[Border] = r.foldLeft(List(this)){(borders, r) => borders.flatMap(_ diff r) }
+    def toRectangle: Rectangle
+  }
+  case class BorderH(row: Int, cols: Range) extends Border {
+    override def diff(r: Rectangle): List[Border]
+      = if (!r.containsRow(row)) List(this) else (cols diff r.colRange).map{range => BorderH(row, range) }
+
+    override def toRectangle: Rectangle = Rectangle(Pos(row, cols.start.toInt), Pos(row, cols.end.toInt))
+  }
+  case class BorderV(rows: Range, col: Int) extends Border {
+    override def diff(r: Rectangle): List[Border]
+      = if (!r.containsCol(col)) List(this) else (rows diff r.rowRange).map{range => BorderV(range, col) }
+
+    override def toRectangle: Rectangle = Rectangle(Pos(rows.start.toInt, col), Pos(rows.end.toInt, col))
+  }
+
   case class Rectangle(p0: Pos, p1: Pos) {
     val min: Pos = p0 min p1
     val max: Pos = p0 max p1
@@ -16,18 +34,17 @@ object Day18 extends Year2023(18) {
     def contains(pos: Pos): Boolean = containsRow(pos.row) && containsCol(pos.col)
     def union(rhs: Rectangle): Rectangle = Rectangle(min min rhs.min, max max rhs.max)
     def area: Long = (max.row - min.row + 1).toLong * (max.col - min.col + 1).toLong
-    def nearby: Iterator[Pos] = Iterator(min, max).flatMap(p => Pos.all.iterator.map(_ + p))
-
-    override def toString: String = s"[${min.row},${min.col}] to [${max.row},${max.col}]"
+    def borders: List[Border] = List(
+      BorderH(min.row - 1, colRange), BorderH(max.row + 1, colRange),
+      BorderV(rowRange, min.col - 1), BorderV(rowRange, max.col + 1)
+    )
   }
   object Rectangle {
     def unit(at: Pos): Rectangle = Rectangle(at, at)
     def start: Rectangle = Rectangle.unit(Pos(0, 0))
   }
 
-  case class Instruction(dir: Pos, n: Int) {
-    def t: Instruction = Instruction(dir.t, n)
-  }
+  case class Instruction(dir: Pos, n: Int)
   object Instruction {
     private val dirs1 = Map("U" -> Pos.UP, "D" -> Pos.DOWN, "L" -> Pos.LEFT, "R" -> Pos.RIGHT)
     private val dirs2 = Map('0' -> Pos.RIGHT, '1' -> Pos.DOWN, '2' -> Pos.LEFT, '3' -> Pos.UP)
@@ -39,73 +56,69 @@ object Day18 extends Year2023(18) {
     }
   }
 
-  case class State(frontier: List[Pos], lagoon: Lagoon)
-  object Dug {
-    def unapply(state: State): Option[State] = {
-      if (state.lagoon.isDug(state.frontier.head)) Some(State(state.frontier.tail, state.lagoon)) else None
-    }
-  }
-  object Bounded {
-    def unapply(state: State): Option[State] = {
-      val p = state.frontier.head
-      if (!state.lagoon.bounds.contains(p) || state.lagoon.isDug(p)) None else {
-        val l = state.lagoon.dug.iterator.filter{r => r.containsRow(p.row) && r.max.col < p.col}.maxByOption(_.max.col).map(_.max.col)
-        val r = state.lagoon.dug.iterator.filter{r => r.containsRow(p.row) && r.min.col > p.col}.minByOption(_.min.col).map(_.min.col)
-        l.zip(r).flatMap{case (l, r) =>
-          val init = Rectangle(Pos(p.row, l + 1), Pos(p.row, r - 1))
-          val u = state.lagoon.minRow(init)
-          val d = state.lagoon.maxRow(init)
-          u.zip(d).map{case (u, d) =>
-            val rect = Rectangle(Pos(u, l + 1), Pos(d, r - 1))
-            // println(s"$p => $init => $rect")
-            State(state.frontier.tail ++ rect.nearby, Lagoon(state.lagoon.dug + rect, state.lagoon.bounds))
-          }
-        }
+  def fillOne(b: Border, start: Lagoon): Lagoon = {
+    var lagoon: Lagoon = start
+    var frontier: List[Border] = List(b)
+    while (frontier.nonEmpty) {
+      val current = frontier.head
+      frontier = frontier.tail
+      val diff = current diff lagoon.dug
+      if (diff.nonEmpty) {
+        val next = lagoon.expanded(diff.head.toRectangle)
+        frontier = frontier ++ diff.tail
+        lagoon = if (next.nonEmpty) new Lagoon(lagoon.dug ++ next, start.bounds) else start
+        frontier = if (next.nonEmpty) frontier ++ next.get.borders else Nil
       }
     }
+    lagoon
   }
 
   case class Lagoon(dug: Set[Rectangle], bounds: Rectangle) {
     def isDug(pos: Pos): Boolean = dug.exists(_.contains(pos))
 
-    case class Diff(remaining: List[Range], row: Option[Int] = None) {
-      def add(r: Rectangle)(func: Option[Int] => Option[Int]): Diff = {
-        val next = remaining.flatMap(_ diff r.colRange)
-        // if (remaining.nonEmpty) println(s"${remaining.mkString("+")} - ${r.colRange} = ${next.mkString("+")}")
-        Diff(next, func(row))
+    def expanded(t: Rectangle): Option[Rectangle] = if ((bounds union t) != bounds) None else {
+      minCol(t).zip(maxCol(t)).flatMap{case (c0, c1) =>
+        val t2 = Rectangle(Pos(t.min.row, c0), Pos(t.max.row, c1))
+        minRow(t2).zip(maxRow(t2)).map{case (r0, r1) => Rectangle(Pos(r0, c0), Pos(r1, c1)) }
       }
     }
 
+    case class Diff(remaining: List[Range], x: Option[Int] = None) {
+      def this(r: Range) = this(List(r))
+      def add(r: Range)(func: Option[Int] => Option[Int]): Diff = Diff(remaining.flatMap(_ diff r), func(x))
+    }
+
+    def left(r: Rectangle): Iterator[Rectangle]
+      = dug.iterator.filter(_.rowRange overlaps r.rowRange).filter(_.max.col < r.min.col)
+    def right(r: Rectangle): Iterator[Rectangle]
+      = dug.iterator.filter(_.rowRange overlaps r.rowRange).filter(_.min.col > r.max.col)
     def above(r: Rectangle): Iterator[Rectangle]
       = dug.iterator.filter(_.colRange overlaps r.colRange).filter(_.max.row < r.min.row)
     def below(r: Rectangle): Iterator[Rectangle]
-      = dug.iterator.filter(_.colRange overlaps r.colRange).filter(_.min.row > r.min.row)
+      = dug.iterator.filter(_.colRange overlaps r.colRange).filter(_.min.row > r.max.row)
+
+    def minCol(r: Rectangle): Option[Int]
+      = Some(left(r).foldLeft(new Diff(r.rowRange)){(diff, r) => diff.add(r.rowRange)(_ max r.max.col) })
+        .filter(_.remaining.isEmpty)
+        .flatMap(_.x.map(_ + 1))
+
+    def maxCol(r: Rectangle): Option[Int]
+      = Some(right(r).foldLeft(new Diff(r.rowRange)){(diff, r) => diff.add(r.rowRange)(_ min r.min.col) })
+        .filter(_.remaining.isEmpty)
+        .flatMap(_.x.map(_ - 1))
 
     def minRow(r: Rectangle): Option[Int]
-      = Some(above(r).foldLeft(Diff(List(r.colRange))){(diff, r) => diff.add(r)(_ max r.max.row) })
+      = Some(above(r).foldLeft(new Diff(r.colRange)){(diff, r) => diff.add(r.colRange)(_ max r.max.row) })
         .filter(_.remaining.isEmpty)
-        .flatMap(_.row.map(_ + 1))
+        .flatMap(_.x.map(_ + 1))
 
     def maxRow(r: Rectangle): Option[Int]
-      = Some(below(r).foldLeft(Diff(List(r.colRange))){(diff, r) => diff.add(r)(_ min r.min.row) })
+      = Some(below(r).foldLeft(new Diff(r.colRange)){(diff, r) => diff.add(r.colRange)(_ min r.min.row) })
         .filter(_.remaining.isEmpty)
-        .flatMap(_.row.map(_ - 1))
+        .flatMap(_.x.map(_ - 1))
 
-    def fillOne(pos: Pos): Lagoon = LazyList.iterate(State(List(pos), this)){
-      case current @ Dug(next) =>
-        // println(s"${current.frontier.head}: DUG")
-        next
-      case current @ Bounded(next) =>
-        // println(next.lagoon.matrix())
-        next
-      case _ => State(Nil, this)
-    }.dropWhile(_.frontier.nonEmpty).head.lagoon
-
-    def filled(): Lagoon = {
-      dug.iterator.flatMap(_.nearby).filterNot(isDug).foldLeft(this){(current, pos) =>
-        current.fillOne(pos)
-      }
-    }
+    def filled(): Lagoon
+      = dug.iterator.flatMap(_.borders).foldLeft(this){(current, border) => fillOne(border, current) }
 
     def matrix(): Matrix[Char] = Matrix(
       (bounds.min to bounds.max).map{p => if (isDug(p)) '#' else '.' }
@@ -119,19 +132,14 @@ object Day18 extends Year2023(18) {
     def apply(insts: Iterator[Instruction]): Lagoon = insts.foldLeft((Pos(0,0), Lagoon.start)){
       case ((pos,state), inst) =>
         val trench = Rectangle(pos + inst.dir, pos + inst.dir*inst.n)
-        (pos + inst.dir*inst.n, Lagoon(dug = state.dug + trench, state.bounds union trench))
+        (trench.p1, Lagoon(dug = state.dug + trench, state.bounds union trench))
     }._2
   }
 
   val lines = data.getLines().toArray
   val part1 = Lagoon(lines.iterator.flatMap(Instruction.parse1)).filled()
   println(s"Part 1: ${part1.area}")
-  write("pt2", part1.matrix().toString)
-  // println(trench.matrix())
-  // println("-------")
-  // println(part1.matrix())
+
   val part2 = Lagoon(lines.iterator.flatMap(Instruction.parse2)).filled()
   println(s"Part 2: ${part2.area}")
-  // val part2_t = Lagoon(insts2.iterator.map(_.t)).filled()
-  // println(s"Part 2(t): ${part2_t.area}")
 }

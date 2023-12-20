@@ -31,7 +31,7 @@ class Range(val start: Long, val length: Long) {
 
   def nonEmpty: Boolean = length > 0
 
-  override def toString: String = if (length > 0) s"[$start, $end)" else "Empty"
+  override def toString: String = if (length > 0) s"[$start, $end]" else "Empty"
 }
 
 object Range {
