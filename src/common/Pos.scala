@@ -19,6 +19,14 @@ case class Pos(row: Int, col: Int) {
       (col to rhs.col by stepCol).iterator.map{j => Pos(i, j) }
     }
   }
+
+  // Rotates (counterclockwise)
+  def t: Pos = this match {
+    case Pos.LEFT => Pos.DOWN
+    case Pos.RIGHT => Pos.UP
+    case Pos.UP => Pos.LEFT
+    case Pos.DOWN => Pos.RIGHT
+  }
 }
 object Pos {
   // \ | /
