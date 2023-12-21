@@ -7,7 +7,6 @@ object Day19 extends Year2023(19) {
     def nonEmpty: Boolean = fields.forall(_._2.nonEmpty)
     def sum: Long = "xmas".map{c => fields(c).start }.sum
     def product: Long = "xmas".map{c => fields(c).length }.product
-    override def toString: String = "xmas".map{c => s"$c:${fields(c)}"}.mkString("{",",","}")
   }
   object Part {
     val any: Part = Part("xmas".map{c => c -> Range.inclusive(1, 4000)}.toMap)
@@ -27,7 +26,6 @@ object Day19 extends Year2023(19) {
         val field = x.charAt(0)
         Some({p: Part =>
           val (pass, fail) = split(x(1))(p.fields(field), x.drop(2).toInt)
-          println(s"$p.${x(0)} ${x(1)} ${x.drop(2)}: ($pass, $fail)")
           (Part(p.fields + (field -> pass)), Part(p.fields + (field -> fail)))
         })
       }
