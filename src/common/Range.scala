@@ -7,6 +7,21 @@ class Range(val start: Long, val length: Long) {
 
   def overlaps(rhs: Range): Boolean = rhs.start <= end && rhs.end >= start
 
+  /**
+   * Returns a tuple of ranges, the first with values [start,cutoff), the second with [cutoff,end]
+   * Either range may be empty if cutoff is not contained within this range.
+   */
+  def <(cutoff: Int): (Range, Range) = {
+    if (contains(cutoff)) (Range.inclusive(start, cutoff - 1), Range.inclusive(cutoff,end))
+    else if (end < cutoff) (this, Range.empty)
+    else (Range.empty, this)
+  }
+  def >(cutoff: Int): (Range, Range) = {
+    if (contains(cutoff)) (Range.inclusive(cutoff + 1, end), Range.inclusive(start, cutoff))
+    else if (start > cutoff) (this, Range.empty)
+    else (Range.empty, this)
+  }
+
   // s ----- e
   // ---
   def diff(rhs: Range): List[Range] = if (overlaps(rhs)) {
@@ -36,6 +51,7 @@ class Range(val start: Long, val length: Long) {
 
 object Range {
   def empty: Range = Range(0, 0)
+  def unit(i: Int): Range = Range.inclusive(i, i)
   def inclusive(start: Long, end: Long): Range = Range(start, end - start + 1)
   def apply(start: Long, length: Long): Range = if (length >= 0) new Range(start, length) else empty
   def unapply(x: Any): Option[(Long, Long)] = x match {
