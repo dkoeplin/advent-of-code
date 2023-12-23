@@ -24,6 +24,7 @@ object Pos3 {
     Pos3(x.toInt, y.toInt, z.toInt)
   }
   def parse(line: String): Pos3 = parse(line, ",")
+  def unapply(line: String): Option[Pos3] = Some(parse(line))
   val NegX: Pos3 = Pos3(-1, 0, 0)
   val PosX: Pos3 = Pos3(1, 0, 0)
   val NegY: Pos3 = Pos3(0, -1, 0)

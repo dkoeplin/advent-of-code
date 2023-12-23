@@ -20,6 +20,9 @@ case class Pos(row: Int, col: Int) {
     }
   }
 
+  def isIn(s: Surface): Boolean
+    = row >= s.min.row && row <= s.max.row && col >= s.min.col && col <= s.max.col
+
   // Rotates (counterclockwise)
   def t: Pos = this match {
     case Pos.LEFT => Pos.DOWN
@@ -27,6 +30,8 @@ case class Pos(row: Int, col: Int) {
     case Pos.UP => Pos.LEFT
     case Pos.DOWN => Pos.RIGHT
   }
+
+  override def toString: String = s"($row,$col)"
 }
 object Pos {
   // \ | /
