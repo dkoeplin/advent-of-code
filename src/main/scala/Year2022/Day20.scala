@@ -9,7 +9,7 @@ object Day20 extends App {
   def move(x: Long, i: Int, length: Int): Int = {
     val raw = i + x
     val dir = Ordering[Long].compare(x, 0)
-    val remain = Math.abs(x) - (if (x >= 0) (length - i - 1) else i)
+    val remain = Math.abs(x) - (if (x >= 0) length - i - 1 else i)
     // Wrapping is "free" but looks like a count in modular arithmetic, e.g. 0 => 6 is "free"
     val wraps = if (raw < 0 || raw >= length) 1 + (remain / (length - 1)) else 0
     Math.floorMod(raw + wraps * dir, length.toLong).toInt
@@ -23,8 +23,8 @@ object Day20 extends App {
   assert(move(-93, 6, 7) == 3)
 
   case class Mapping(forward: Map[Int, Int] = Map.empty, backward: Map[Int, Int] = Map.empty) {
-    def add(i: Int, i2: Int) = Mapping(forward + (i -> i2), backward + (i2 -> i))
-    def remap(i2: Int, i3: Int) = add(bwd(i2), i3)
+    def add(i: Int, i2: Int): Mapping = Mapping(forward + (i -> i2), backward + (i2 -> i))
+    def remap(i2: Int, i3: Int): Mapping = add(bwd(i2), i3)
     def fwd(i: Int): Int = forward.getOrElse(i, i)
     def bwd(i2: Int): Int = backward.getOrElse(i2, i2)
   }
@@ -42,8 +42,8 @@ object Day20 extends App {
 
   def mix2(a: Array[Long], n: Int, verbose: Boolean = false): Array[Long] = {
     val array = a.clone
-    val fwd = scala.collection.mutable.Map.empty[Int, Int] ++ array.indices.map{i => (i -> i)}
-    val bwd = scala.collection.mutable.Map.empty[Int, Int] ++ array.indices.map{i => (i -> i)}
+    val fwd = scala.collection.mutable.Map.empty[Int, Int] ++ array.indices.map{i => i -> i}
+    val bwd = scala.collection.mutable.Map.empty[Int, Int] ++ array.indices.map{i => i -> i}
     def relocate(i2: Int, i3: Int): Unit = {
       array(i3) = array(i2)
       val i = bwd(i2)

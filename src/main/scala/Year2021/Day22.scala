@@ -30,7 +30,7 @@ case class Cube(x1: Long, x2: Long, y1: Long, y2: Long, z1: Long, z2: Long, valu
 }
 object Cube {
   private val Num = "(-?[0-9]+)"
-  private val CmdPattern = (s"(o.+) x=$Num\\.\\.$Num,y=$Num\\.\\.$Num,z=$Num\\.\\.$Num").r
+  private val CmdPattern = s"(o.+) x=$Num\\.\\.$Num,y=$Num\\.\\.$Num,z=$Num\\.\\.$Num".r
 
   def parse(line: String): Option[Cube] = line match {
     case CmdPattern(cmd,x1,x2,y1,y2,z1,z2) => Some(Cube(x1.toInt,x2.toInt,y1.toInt,y2.toInt,z1.toInt,z2.toInt, if (cmd == "on") 1 else 0))

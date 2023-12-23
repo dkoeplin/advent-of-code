@@ -10,9 +10,9 @@ object Day23 extends App {
   def vvprintln(x: => String): Unit = ()
 
   case class Pos(y: Int, x: Int) {
-    def inRoom: Boolean = (y == 2 || y == 3)
+    def inRoom: Boolean = { y == 2 || y == 3 }
 
-    def inHall: Boolean = (y == 1)
+    def inHall: Boolean = { y == 1 }
 
     override def toString: String = s"($y,$x)"
 
@@ -41,7 +41,7 @@ object Day23 extends App {
     val kRoom3 = 3
 
     // X positions of all rooms
-    val doors = Seq(3, 5, 7, 9)
+    val doors: Seq[Int] = Seq(3, 5, 7, 9)
     // Set of all room positions
     val rooms: Set[Pos] = (2 to 3).flatMap { y => doors.map { x => Pos(y, x) } }.toSet
     // Set of all hall positions

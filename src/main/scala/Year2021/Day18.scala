@@ -6,7 +6,7 @@ import common.Directions._
 import scala.collection.mutable
 
 case class Trace(path: List[Dir], x: Either[Int,Pair]) {
-  def pair: Pair = x.right.get
+  def pair: Pair = x.toOption.get
 
   def left(n: Int = -1): Trace = x match {
     case Left(_) => this
@@ -44,8 +44,8 @@ case class Pair(var a: Either[Int,Pair], var b: Either[Int,Pair]) {
   def map(func: PartialFunction[Trace, Either[Int,Pair]]): Pair = map(Nil, func)
 
   def value(dir: Dir): Int = dir match {
-    case L if a.isLeft => a.left.get
-    case R if b.isLeft => b.left.get
+    case L if a.isLeft => a.left.getOrElse(1)
+    case R if b.isLeft => b.left.getOrElse(1)
   }
   def update(dir: Dir, v: Either[Int,Pair]): Unit = dir match {
     case L => a = v

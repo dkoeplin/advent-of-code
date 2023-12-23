@@ -137,7 +137,7 @@ object Day19 extends App {
       val (next, pareto) = frontier.foldLeft((Set.empty[State], false)){(prev, f) =>
         val pareto = prev._2 || (state.x anyGreater f.x)
         val dominated = state.x allGreater f.x
-        val next = if (dominated) (prev._1 + f) else prev._1
+        val next = if (dominated) prev._1 + f else prev._1
         (next, pareto)
       }
       (frontier diff next) ++ Some(state).filter(_ => frontier.isEmpty || pareto)

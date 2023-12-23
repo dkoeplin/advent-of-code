@@ -3,7 +3,7 @@ package Year2021
 
 object Target {
   private val Number = "\\-?[0-9]+"
-  private val TargetPattern = (s"target area: x=($Number)\\.\\.($Number), y=($Number)\\.\\.($Number)").r
+  private val TargetPattern = s"target area: x=($Number)\\.\\.($Number), y=($Number)\\.\\.($Number)".r
   def unapply(x: String): Option[(Int,Int,Int,Int)] = x match {
     case TargetPattern(x0,x1,y0,y1) => Some((x0.toInt,x1.toInt,y0.toInt,y1.toInt))
     case _ => None

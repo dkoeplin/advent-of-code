@@ -3,10 +3,10 @@ package Year2022
 object Day08 extends App {
   object Dir extends Enumeration {
     type Dir = Value
-    val L = Value("L")
-    val R = Value("R")
-    val U = Value("U")
-    val D = Value("D")
+    val L: Dir = Value("L")
+    val R: Dir = Value("R")
+    val U: Dir = Value("U")
+    val D: Dir = Value("D")
   }
 
   case class Pos(row: Int, col: Int) {
@@ -51,7 +51,7 @@ object Day08 extends App {
 
   val h = (0 until data.rows).iterator.flatMap{i => scan(i, Dir.L) ++ scan(i, Dir.R) }.toSet
   val v = (0 until data.cols).iterator.flatMap{i => scan(i, Dir.U) ++ scan(i, Dir.D) }.toSet
-  val x = (h ++ v)
+  val x = h ++ v
   val part1 = x.size
   println(s"Part1: $part1")
 

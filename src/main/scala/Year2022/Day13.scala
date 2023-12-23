@@ -72,7 +72,7 @@ object Day13 extends App {
 
   val l2 = NestedList.parse("L2", 0, "[[2]]")
   val l6 = NestedList.parse("L6", 0, "[[6]]")
-  val l2_pos = (lists.count(_ <= l2) + 1)
-  val l6_pos = (lists.count(_ <= l6) + 2) // [[2]] <= [[6]] always
+  val l2_pos = lists.count(_ <= l2) + 1
+  val l6_pos = lists.count(_ <= l6) + 2 // [[2]] <= [[6]] always
   println(s"Part2: ${l2_pos * l6_pos} ($l2_pos * $l6_pos)")
 }

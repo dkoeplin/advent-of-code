@@ -33,13 +33,14 @@ object Descrambler extends App {
     override def toString: String = x.mkString(" ")
   }
 
-  def find(length: Int, remain: Map[Char, Int]) = words(length).iterator.flatMap { word => valid(word, remain).map { x => (x, word) } }
+  def findRest(length: Int, remain: Map[Char, Int]): Iterator[(Map[Char, Int], String)]
+  = words(length).iterator.flatMap { word => valid(word, remain).map { x => (x, word) } }
 
-  def find(lengths: Int*): Seq[Found] = {
+  def find(lengths: Seq[Int]): Seq[Found] = {
     var found: Seq[Found] = Seq(Found(Nil, countLetters(letters)))
-    lengths.toSeq.foreach { len =>
-      found = found.groupBy(_.remain).flatMap { case (remain, fs) =>
-        find(len, remain).flatMap { case (counts, word) =>
+    lengths.foreach{len =>
+      found = found.groupBy(_.remain).iterator.flatMap{case (remain, fs) =>
+        findRest(len, remain).flatMap { case (counts, word) =>
           val left = diff(remain, counts)
           fs.map { f => Found(f.x :+ word, left) }
         }
@@ -49,6 +50,5 @@ object Descrambler extends App {
     found
   }
 
-  find(7, 5, 5).sortBy(_.x.head).foreach { f => println(f) }
-
+  find(Seq(7, 5, 5)).sortBy(_.x.head).foreach { f => println(f) }
 }

@@ -18,7 +18,7 @@ case class SparseGrid[T](default: T) {
   override def toString: String = {
     val min = start()
     val max = end()
-    val ss = StringBuilder.newBuilder
+    val ss = new StringBuilder()
     (min.row to max.row).foreach { i =>
       (min.col to max.col).foreach { j =>
         ss ++= apply(i, j).toString

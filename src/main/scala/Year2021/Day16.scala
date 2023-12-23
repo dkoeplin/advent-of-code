@@ -24,9 +24,9 @@ case class Operator(override val header: Header, packets: mutable.Seq[Packet], e
       case 1 => elems.product
       case 2 => elems.min
       case 3 => elems.max
-      case 5 => if (elems(0) > elems(1)) 1L else 0L
-      case 6 => if (elems(0) < elems(1)) 1L else 0L
-      case 7 => if (elems(0) == elems(1)) 1L else 0L
+      case 5 => if (elems.head > elems(1)) 1L else 0L
+      case 6 => if (elems.head < elems(1)) 1L else 0L
+      case 7 => if (elems.head == elems(1)) 1L else 0L
       case tp => sys.error(s"Invalid packet type: $tp")
     }
   }

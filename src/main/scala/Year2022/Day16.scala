@@ -81,7 +81,7 @@ object Day16 extends App {
     def initial(n: Int, MINUTES: Int): Path = Path(Array.empty, Seq.fill(n)(1), 0, MINUTES)
   }
 
-  def getPath(p: Int, n: Int, MINUTES: Int): Unit = {
+  def path(p: Int, n: Int, MINUTES: Int): Unit = {
     println(s"== Part $p ==")
     var length: Int = 1
     var best: Option[Path] = None
@@ -112,6 +112,6 @@ object Day16 extends App {
     }
   }
 
-  getPath(p=1, n=1, MINUTES=30)
-  getPath(p=2, n=2, MINUTES=26)
+  path(p=1, n=1, MINUTES=30)
+  path(p=2, n=2, MINUTES=26)
 }

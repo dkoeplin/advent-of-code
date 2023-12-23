@@ -44,7 +44,7 @@ object Day12 extends App {
       if (current == end) {
         paths += (path :+ end)
       } else if (path.count(_ == current) < 100) { // Just in case infinite loops are possible
-        val counts = path.filter(small.contains).groupBy(x => x).mapValues(_.length)
+        val counts = path.filter(small.contains).groupBy(x => x).view.mapValues(_.length)
         val small2 = counts.exists(_._2 >= 2)
         val blocked = if (part2 && !small2) Set(start) else path.toSet intersect small
         val next = neighbors(current) diff blocked
