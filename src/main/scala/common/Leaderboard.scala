@@ -17,7 +17,7 @@ case class Records(times: Array[Double]) {
   lazy val min: Double = times.min
   lazy val max: Double = times.max
   lazy val avg: Double = times.sum / times.length
-  lazy val stddev: Double = math.sqrt(times.iterator.map{t => math.pow(avg - t, 2) }.sum/times.length)
+  lazy val stddev: Double = Math.sqrt(times.iterator.map{t => Math.pow(avg - t, 2) }.sum/times.length)
 }
 object Records {
   private val regex = "([0-9]{2}):([0-9]{2}):([0-9]{2})".r

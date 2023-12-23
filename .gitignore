@@ -1,7 +1,10 @@
 *.class
 *.log
 *.iml
+/.bsp/
 /.idea/
 /out/
 /example/
 /data/
+/project/
+/target/

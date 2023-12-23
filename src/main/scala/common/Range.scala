@@ -31,8 +31,8 @@ class Range(val start: Long, val length: Long) {
   } else List(this)
 
   def intersect(rhs: Range): Range = {
-    val beg = math.max(start, rhs.start)
-    val end = math.min(this.end, rhs.end)
+    val beg = Math.max(start, rhs.start)
+    val end = Math.min(this.end, rhs.end)
     val len = end - beg + 1
     Range(beg, len)
   }
