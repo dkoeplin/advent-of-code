@@ -8,6 +8,7 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   val data: Array[Seq[T]] = vs.map{vs => Seq.empty[T] ++ vs }.toArray
   val rows: Int = data.length
   val cols: Int = if (data.nonEmpty) data(0).length else 0
+  def has(pos: Pos): Boolean = get(pos).nonEmpty
   def get(i: Int, j: Int): Option[T] = if (i >= 0 && i < rows && j >= 0 && j < cols) { Some(data(i)(j)) } else None
   def get(pos: Pos): Option[T] = get(pos.row, pos.col)
   def getOrElse(i: Int, j: Int, default: => T): T = get(i, j).getOrElse(default)
@@ -33,6 +34,7 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
   def indices(): Seq[(Int,Int)] = (0 until rows).flatMap{i => (0 until cols).map{j => (i,j) }}
 
   def posIterator(): Iterator[Pos] = (0 until rows).iterator.flatMap{i => (0 until cols).map{j => Pos(i,j) }}
+  def reverseIterator: Iterator[Pos] = (rows - 1 to 0 by -1).iterator.flatMap{i => (cols - 1 to 0 by -1).map{j => Pos(i,j) }}
 
   def mapIndices[R](func: (Int,Int) => R): Matrix[R] = Matrix(
     (0 until rows).iterator.map{i =>
