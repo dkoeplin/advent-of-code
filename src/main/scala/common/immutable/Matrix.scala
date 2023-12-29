@@ -63,6 +63,34 @@ class Matrix[T](vs: Iterator[Iterable[T]]) {
     (0 until rows).map{i => apply(i, j) }
   }
 
+  /// Create a new (printable) Matrix using the function func on every position in this matrix.
+  def printed(func: Pos => Char): Matrix[Char] = Matrix[Char]{
+    (0 until rows).iterator.map{r =>
+      (0 until cols).map{c => func(Pos(r, c)) }
+    }
+  }
+
+  /// Create a new annotated, printable Matrix using the function func on every position in this matrix.
+  /// Adds row and column label numbers for help with debugging.
+  def annotated(func: Pos => Char): Matrix[Char] = Matrix[Char]{
+    val colsLog10 = Math.ceil(Math.log10(cols)).toInt
+    val rowsLog10 = Math.ceil(Math.log10(rows)).toInt
+    val paddedRows = rows + colsLog10
+    val paddedCols = cols + rowsLog10
+    (0 until paddedRows).iterator.map{r =>
+      lazy val rStr = (r - 2).toString
+      lazy val rPad = " "*(rowsLog10-rStr.length) + rStr
+      (0 until paddedCols).map{c =>
+        lazy val cStr = (c - 2).toString
+        lazy val cPad = " "*(colsLog10-cStr.length) + cStr
+        if (r < colsLog10 && c < rowsLog10) ' '
+        else if (r < colsLog10) cPad.charAt(r)
+        else if (c < rowsLog10) rPad.charAt(c)
+        else func(Pos(r - colsLog10, c - rowsLog10))
+      }
+    }
+  }
+
   override def toString: String = data.map{vs => vs.map{x => Matrix.digit(x)}.mkString("")}.mkString("\n")
 }
 object Matrix {
@@ -74,4 +102,6 @@ object Matrix {
     case x: Int => val str = Integer.toHexString(x); if (str.length > 1) "N" else str
     case _ => x.toString
   }
+
+
 }
