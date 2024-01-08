@@ -1,20 +1,24 @@
 package Year2023
 
-import common.Pos
-import common.immutable.Matrix
+import common.immutable.Pos._
+import common.immutable.{Constructible, Matrix, Volume}
 import common.implicits.IteratorOps._
+import common.parse
 
-object Day14 extends Year2023(14) {
-  case class Platform(iter: Iterator[Iterable[Char]]) extends Matrix[Char](iter) {
-    def tilt(delta: Pos): Platform = {
-      val reverse = delta.col < 0 || delta.row < 0
-      val iterator = if (delta.row != 0) iterateOverCols() else iterateOverRows()
-      val tilted = Platform(iterator.map{vec =>
-        vec.split('#').map(_.total(_ == 'O')).map{case (rocks, empty) =>
-          if (!reverse) "."*empty + "O"*rocks else "O"*rocks + "."*empty
-        }.mkString("#").toArray
-      })
-      if (delta.row != 0) Platform(tilted.t) else tilted
+object Day14 extends common.AoC(14, 2023) {
+  case class Platform(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
+    private def slide(empty: Int, rocks: Int, reverse: Boolean): String
+      = if (empty + rocks == 0) "#" else if (!reverse) "." * empty + "O" * rocks else "O" * rocks + "." * empty
+
+    private def slide(vec: Iterator[Char], reverse: Boolean): String = {
+      vec.split('#').map(_.total(_ == 'O')).map{case Idx(empty, rocks) => slide(empty, rocks, reverse) }.mkString
+    }
+
+    def tilt(delta: Idx): Platform = {
+      val reverse = delta.w < 0 || delta.h < 0
+      val vectors = if (delta.h != 0) cols else rows
+      val tilted = Platform(volume, vectors.flatMap{vec => slide(vec, reverse) }.toArray)
+      if (delta.h != 0) tilted.t.to[Platform] else tilted
     }
 
     override def hashCode(): Int = rocks.hashCode()
@@ -24,7 +28,7 @@ object Day14 extends Year2023(14) {
     }
 
     def spin(cycles: Long): Int = {
-      val spin = List(Pos.UP, Pos.LEFT, Pos.DOWN, Pos.RIGHT)
+      val spin = List(Idx.D2.U, Idx.D2.L, Idx.D2.D, Idx.D2.R)
       val n = cycles * spin.length
       val cache = collection.mutable.Map.empty[(Int, Int), Int]
       val path = collection.mutable.ArrayBuffer.empty[Int]
@@ -42,12 +46,13 @@ object Day14 extends Year2023(14) {
       cycle.map{_.loadAt(n)}.getOrElse(current.load)
     }
 
-    lazy val rocks: Set[Pos] = posIterator().filter{pos => apply(pos) == 'O'}.toSet
-    lazy val load: Int = rocks.iterator.map{pos => rows - pos.row}.sum
+    lazy val rocks: Set[Idx] = indices.filter{pos => apply(pos) == 'O'}.toSet
+    lazy val load: Int = rocks.iterator.map{pos => H - pos.h}.sum
     private var cycle: Option[Cycle] = None
   }
+  implicit object Platform extends Constructible[Char,Platform]
 
-  val platform = Platform(data.getLines().map(_.toArray))
-  println(s"Part 1: ${platform.tilt(Pos.UP).load}")
+  val platform = parse.chars(data).to[Platform]
+  println(s"Part 1: ${platform.tilt(Idx.D2.U).load}")
   println(s"Part 2: ${platform.spin(1000000000L)}")
 }

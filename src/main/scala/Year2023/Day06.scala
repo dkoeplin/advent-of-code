@@ -1,6 +1,6 @@
 package Year2023
 
-object Day06 extends Year2023(6) {
+object Day06 extends common.AoC(6, 2023) {
   val time = "Time: "
   val dist = "Distance: "
   val lines = data.getLines()
@@ -17,8 +17,8 @@ object Day06 extends Year2023(6) {
     // So number of combinations is just integer values between these two zeros (non-inclusive)
     val x = t * t - 4 * d
     if (x < 0) 0 else {
-      val z0 = math.floor((t - math.sqrt(x)) / 2).toLong + 1
-      val z1 = math.ceil((t + math.sqrt(x)) / 2).toLong - 1
+      val z0 = math.floor((t - math.sqrt(x.toDouble)) / 2).toLong + 1
+      val z1 = math.ceil((t + math.sqrt(x.toDouble)) / 2).toLong - 1
       if (z1 >= z0) z1 - z0 + 1 else 0
     }
   }

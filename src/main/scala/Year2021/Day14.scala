@@ -7,10 +7,9 @@ object Poly {
   def apply(x: String): Poly = Poly(x.charAt(0),x.charAt(1))
 }
 
-object Day14 extends App {
+object Day14 extends common.AoC(14, 2021) {
   val Rule = "([A-Z])([A-Z]) -> ([A-Z])".r
-  val file = scala.io.Source.fromFile("./data/14")
-  val lines = file.getLines()
+  val lines = data.getLines()
   val init: String = lines.next()
   val rules: Map[Poly,Char] = lines.flatMap{case Rule(a,b,c) => Some(Poly(a.head,b.head) -> c.head); case _ => None }.toMap
 

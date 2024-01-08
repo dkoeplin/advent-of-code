@@ -1,6 +1,6 @@
 package Year2023
 
-object Day07 extends Year2023(7) {
+object Day07 extends common.AoC(7, 2023) {
   trait Rules extends Ordering[Hand] {
     protected type HandPattern = Map[Char, Int] => Boolean
     protected val cardRanking: List[Char]

@@ -2,7 +2,7 @@ package Year2023
 
 import scala.util.matching.Regex
 
-object Day12 extends Year2023(12) {
+object Day12 extends common.AoC(12, 2023) {
   case class Range(start: Int, end: Int) {
     def contains(i: Int): Boolean = i >= start && i < end
     def length: Int = end - start

@@ -29,9 +29,8 @@ object Stacks {
     })
   }
 }
-object Day05 extends App {
-  val file = scala.io.Source.fromFile("data/2022/05")
-  val lines = file.getLines().toArray
+object Day05 extends common.AoC(5, 2022) {
+  val lines = data.getLines().toArray
   val stacks = Stacks.parse(lines)
   val part1 = lines.foldLeft(stacks){
     case (stacks, Move(n, src, dst)) => stacks.move(n, src, dst, reverse=true)

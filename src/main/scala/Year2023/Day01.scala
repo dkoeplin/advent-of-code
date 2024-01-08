@@ -19,7 +19,7 @@ object NamedDigits {
   }
 }
 
-object Day01 extends Year2023(1) {
+object Day01 extends common.AoC(1, 2023) {
   val lines = data.getLines().toArray
   val part1 = lines.map{line =>
     val i = line.indexWhere(_.isDigit)

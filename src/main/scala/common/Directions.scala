@@ -1,8 +1,11 @@
 package common
 
-object Directions extends Enumeration {
+object Dir2D extends Enumeration {
   type Dir = Value
-  def flip(dir: Dir): Dir = if (dir == L) R else L
-  val L: Dir = Value("L")
-  val R: Dir = Value("R")
+  val L, R, U, D = Value
+}
+
+object Dir3D extends Enumeration {
+  type Dir = Value
+  val L, R, U, D, F, B = Value
 }

@@ -47,9 +47,8 @@ object Cube {
   }
 }
 
-object Day22 extends App {
-  val file = io.Source.fromFile("./data/22")
-  val cmds = file.getLines().flatMap(Cube.parse).toArray
+object Day22 extends common.AoC(22, 2021) {
+  val cmds = data.getLines().flatMap(Cube.parse).toArray
 
   def addCube(cubes: Seq[Cube], next: Cube): Seq[Cube] = {
     if (next.value >= 1)

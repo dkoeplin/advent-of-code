@@ -1,26 +1,27 @@
 package Year2022
 
-import common.Pos
-import common.mutable.SparseGrid
-object Day17 extends App {
-  case class Rock(pos: Pos, kind: Int) {
-    def pixels(): Array[Pos] = Rock.getPixels(pos, kind)
-    def move(delta: Pos, grid: SparseGrid[Char]): Option[Rock] = {
+import common.immutable.Pos.Idx
+import common.mutable.SparseMatrix
+
+object Day17 extends common.AoC(17, 2022) {
+  case class Rock(pos: Idx, kind: Int) {
+    def pixels(): Array[Idx] = Rock.getPixels(pos, kind)
+    def move(delta: Idx, grid: SparseMatrix[Char]): Option[Rock] = {
       Some(Rock(pos + delta, kind)).filter(_.valid(grid))
     }
-    def valid(grid: SparseGrid[Char]): Boolean = pixels().forall{pos =>
-      pos.col >= 0 && pos.col <= 6 && grid(pos) == '.'
+    def valid(grid: SparseMatrix[Char]): Boolean = pixels().forall{pos =>
+      pos.w >= 0 && pos.w <= 6 && grid(pos) == '.'
     }
   }
   object Rock extends Enumeration {
-    private def pixels(seq: String): Array[Pos] = {
+    private def pixels(seq: String): Array[Idx] = {
       seq.split('/').zipWithIndex.flatMap{case (line, i) =>
         line.zipWithIndex.flatMap{case (c, j) =>
-          Some(Pos(i, j)).filter(_ => c == '#')
+          Some(Idx(i, j)).filter(_ => c == '#')
         }
       }
     }
-    private def getPixels(pos: Pos, kind: Int): Array[Pos] = {
+    private def getPixels(pos: Idx, kind: Int): Array[Idx] = {
       types(kind).map(_ + pos)
     }
     private lazy val types = Array(
@@ -35,51 +36,50 @@ object Day17 extends App {
     def height(kind: Int): Int = heights(kind)
   }
 
-  val file = scala.io.Source.fromFile("data/2022/17")
-  val jets = file.getLines().flatten.toArray
+  val jets = data.getLines().flatten.toArray
 
-  def simulate(rock: Int, jet: Int, grid: SparseGrid[Char]): Int = {
+  def simulate(rock: Int, jet: Int, grid: SparseMatrix[Char]): Int = {
     var jetIndex = jet
     val kind = rock % Rock.kinds
-    val minY = grid.start().row - 3 - Rock.height(kind)
+    val minY = grid.min.h - 3 - Rock.height(kind)
     var prev: Option[Rock] = None
-    var next: Option[Rock] = Some(Rock(Pos(minY, 2), kind))
+    var next: Option[Rock] = Some(Rock(Idx(minY, 2), kind))
     while (next.nonEmpty) {
       val move = jets(jetIndex) match {
-        case '<' => Pos.LEFT
-        case '>' => Pos.RIGHT
+        case '<' => Idx.D2.L
+        case '>' => Idx.D2.R
       }
       prev = next.flatMap(_.move(move, grid)).orElse(next)
       jetIndex = (jetIndex + 1) % jets.length
-      next = prev.orElse(next).flatMap(_.move(Pos.DOWN, grid))
+      next = prev.orElse(next).flatMap(_.move(Idx.D2.D, grid))
     }
     prev.get.pixels().foreach{p => grid(p) = '#' }
     jetIndex
   }
 
-  def part1(): Int = {
-    val grid = SparseGrid[Char]('.')
-    (0 to 6).foreach { j => grid(0, j) = '-' }
+  def part1(): Long = {
+    val grid = new SparseMatrix[Char]('.')
+    (0 to 6).foreach{j => grid(Idx(0, j)) = '-' }
     var jet = 0
     (0 until 2022).foreach {rock =>
       jet = simulate(rock % Rock.kinds, jet, grid)
     }
-    -grid.start().row
+    -grid.min.h
   }
   println(s"Part1: ${part1()}")
 
-  case class Pair(h: Int, r: Int)
+  case class Pair(h: Long, r: Long)
   case class Pattern(init: Pair, steady: Pair, rem: Pair)
   def part2(max: BigInt): Pattern = {
-    val grid = SparseGrid[Char]('.')
-    (0 to 6).foreach { j => grid(0, j) = '-' }
-    def surface(): Seq[Int] = {
-      val minY = grid.start().row
+    val grid = new SparseMatrix[Char]('.')
+    (0 to 6).foreach { j => grid(Idx(0, j)) = '-' }
+    def surface(): Seq[Long] = {
+      val minY = grid.min.h
       (0 to 6).map{j =>
-        grid.keys.filter(_.col == j).minBy(_.row).row - minY
+        grid.keys.filter(_.w == j).minBy(_.h).h - minY
       }
     }
-    case class State(jet: Int, rock: Int, surface: Seq[Int])
+    case class State(jet: Int, rock: Int, surface: Seq[Long])
 
     var rock: Int = 0
     var jet: Int = 0
@@ -87,11 +87,11 @@ object Day17 extends App {
     var pattern: Option[Pattern] = None
     var rocks: Int = 0
     var maxRocks: Int = 0
-    var prevHeight: Int = 0
+    var prevHeight: Long = 0
     while (rocks < 1000000 && (pattern.isEmpty || rocks < maxRocks)) {
       if (pattern.isEmpty) {
         val state = State(jet, rock, surface())
-        val height = -grid.start().row
+        val height = -grid.min.h
         states.get(state) match {
           case None => states(state) = Pair(height, rocks)
           case Some(Pair(prevH, prevR)) =>
@@ -109,7 +109,7 @@ object Day17 extends App {
       rock = (rock + 1) % Rock.kinds
       rocks += 1
     }
-    val height = -grid.start().row
+    val height = -grid.min.h
     val deltaH = height - prevHeight
     val Pattern(init, steady, Pair(_, rem)) = pattern.get
     Pattern(init, steady, Pair(deltaH, rem))

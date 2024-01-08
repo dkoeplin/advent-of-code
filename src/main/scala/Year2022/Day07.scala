@@ -7,9 +7,8 @@ case class File(name: String, size: Int)
 case class Directory(dirs: List[String], files: List[File])
 case class Parsing(ls: Boolean, dirs: Map[String, Directory], stack: List[String])
 
-object Day07 extends App {
-  val file = scala.io.Source.fromFile("data/2022/07")
-  val lines = file.getLines().toArray
+object Day07 extends common.AoC(7, 2022) {
+  val lines = data.getLines().toArray
   val structure = lines.foldLeft(Parsing(ls=false, Map.empty, Nil)){(state, line) =>
       val ls = state.ls && !line.startsWith("$")
       if (ls) {

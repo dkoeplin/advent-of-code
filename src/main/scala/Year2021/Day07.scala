@@ -1,13 +1,12 @@
 package Year2021
 
-object Day07 extends App {
+object Day07 extends common.AoC(7, 2021) {
   def fuelCost(dist: Long): Long = dist * (dist + 1) / 2 // sum of 1...N
 
   val Num = "([0-9]+)".r
-  val file = scala.io.Source.fromFile("./data/7")
   var minPos: Int = Int.MaxValue
   var maxPos: Int = Int.MinValue
-  val crabs = file.getLines().next().split(",").flatMap {
+  val crabs = data.getLines().next().split(",").flatMap {
     case Num(x) =>
       val pos = x.toInt
       minPos = Math.min(minPos, pos)

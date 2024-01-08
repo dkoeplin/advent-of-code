@@ -1,71 +1,68 @@
 package Year2022
 
-import Year2022.Day22.PosFacing.facings
-import common.Pos
-import common.Directions
+import common.immutable.Pos.Idx
 import common.mutable.Matrix
 
-object Day22 extends App {
+object Day22 extends common.AoC(22, 2022) {
   case class Bounds(min: Int, max: Int) {
     def union(i: Int): Bounds = Bounds(min = Math.min(min, i), max = Math.max(max, i))
   }
 
-  case class Instruction(x: Either[Int, Directions.Dir])
+  case class Instruction(x: Either[Int, Char])
   object Instruction {
     private val dir = "([0-9]+|L|R)".r
-    def apply(x: Directions.Dir): Instruction = Instruction(Right(x))
+    def apply(x: Char): Instruction = Instruction(Right(x))
     def apply(n: Int): Instruction = Instruction(Left(n))
     def parse(x: String): Array[Instruction] = dir.findAllMatchIn(x).map{m => m.group(1) match {
-      case "L" => Instruction(Directions.L)
-      case "R" => Instruction(Directions.R)
+      case "L" => Instruction('L')
+      case "R" => Instruction('R')
       case n   => Instruction(n.toInt)
     }}.toArray
   }
 
-  case class PosFacing(x: Pos, facingIdx: Int) {
-    val facing: Pos = facings(facingIdx)
-    def password: Int = 1000 * (x.row + 1) + 4 * (x.col + 1) + facingIdx
+  case class PosFacing(x: Idx, facingIdx: Int) {
+    val facing: Idx = PosFacing.facings(facingIdx)
+    def password: Long = 1000 * (x.h + 1) + 4 * (x.w + 1) + facingIdx
     def char: Char = PosFacing.chars(facingIdx)
-    override def toString: String = s"$char(${x.row},${x.col})"
+    override def toString: String = s"$char(${x.h},${x.w})"
   }
   object PosFacing {
-    def apply(x: Pos, facing: Pos): PosFacing = PosFacing(x, facings.indexOf(facing))
-    val facings: Seq[Pos] = Seq(Pos.RIGHT, Pos.DOWN, Pos.LEFT, Pos.UP)
+    def apply(x: Idx, facing: Idx): PosFacing = PosFacing(x, facings.indexOf(facing))
+    val facings: Seq[Idx] = Idx.D2.nondiag.toSeq
     val chars: Seq[Char] = Seq('>','v','<','^')
   }
 
-  val file = scala.io.Source.fromFile("data/2022/22")
-  val lines = file.getLines().toArray
+  val lines = data.getLines().toArray
   val map = lines.dropRight(2)
   val rows = map.length
   val cols = map.map(_.length).max
   val board = Matrix.empty[Char](rows, cols, ' ')
-  val rowBounds = Array.fill[Bounds](board.rows)(Bounds(min = board.cols, max = 0))
-  val colBounds = Array.fill[Bounds](board.cols)(Bounds(min = board.rows, max = 0))
+  val rowBounds = Array.fill(board.H)(Bounds(min = board.W, max = 0))
+  val colBounds = Array.fill(board.W)(Bounds(min = board.H, max = 0))
   map.zipWithIndex.foreach{case (line, i) => line.zipWithIndex.foreach{case (c, j) =>
-    board(i, j) = c
+    board(Idx(i, j)) = c
     if (c != ' ') {
       rowBounds(i) = rowBounds(i) union j
       colBounds(j) = colBounds(j) union i
     }
   }}
-  def wrapped(pos: Pos, facing: Pos): Pos = facing match {
-    case Pos.LEFT if pos.col < rowBounds(pos.row).min => Pos(pos.row, rowBounds(pos.row).max)
-    case Pos.RIGHT if pos.col > rowBounds(pos.row).max => Pos(pos.row, rowBounds(pos.row).min)
-    case Pos.UP if pos.row < colBounds(pos.col).min => Pos(colBounds(pos.col).max, pos.col)
-    case Pos.DOWN if pos.row > colBounds(pos.col).max => Pos(colBounds(pos.col).min, pos.col)
+  def wrapped(pos: Idx, facing: Idx): Idx = facing match {
+    case Idx.D2.L if pos.w < rowBounds(pos.h).min => Idx(pos.h, rowBounds(pos.h).max)
+    case Idx.D2.R if pos.w > rowBounds(pos.h).max => Idx(pos.h, rowBounds(pos.h).min)
+    case Idx.D2.U if pos.h < colBounds(pos.w).min => Idx(colBounds(pos.w).max, pos.w)
+    case Idx.D2.D if pos.h > colBounds(pos.w).max => Idx(colBounds(pos.w).min, pos.w)
     case _ => pos
   }
-  def getNext(current: Pos, facing: Pos): Option[Pos] = {
+  def getNext(current: Idx, facing: Idx): Option[Idx] = {
     Some(current + facing).map{n => wrapped(n, facing) }.filter{p => board(p) != '#' }
   }
 
   val dirs = Instruction.parse(lines.last)
-  val start = PosFacing(Pos(row = 0, col = rowBounds(0).min), Pos.RIGHT)
+  val start = PosFacing(Idx(0,  rowBounds(0).min), Idx.D2.R)
   val part1 = dirs.foldLeft(start){(current, i) => i.x match {
     case Left(n) =>
-      var curr: Pos = current.x
-      var next: Option[Pos] = Some(curr)
+      var curr: Idx = current.x
+      var next: Option[Idx] = Some(curr)
       var ii = 0
       while (ii < n && next.nonEmpty) {
         curr = next.get
@@ -78,13 +75,13 @@ object Day22 extends App {
       board(end.x) = end.char
       println(s"$current + ${current.char}$n: $end")
       end
-    case Right(Directions.L) =>
-      val end = PosFacing(current.x, Math.floorMod(current.facingIdx - 1, facings.size))
+    case Right('L') =>
+      val end = PosFacing(current.x, Math.floorMod(current.facingIdx - 1, PosFacing.facings.size))
       board(end.x) = end.char
       println(s"$current + L: $end")
       end
-    case Right(Directions.R) =>
-      val end = PosFacing(current.x, Math.floorMod(current.facingIdx + 1, facings.size))
+    case Right('R') =>
+      val end = PosFacing(current.x, Math.floorMod(current.facingIdx + 1, PosFacing.facings.size))
       board(end.x) = end.char
       println(s"$current + R: $end")
       end

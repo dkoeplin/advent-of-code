@@ -2,11 +2,9 @@ package Year2021
 
 import scala.collection.mutable
 
-object Day06 extends App {
+object Day06 extends common.AoC(6, 2021) {
   var fish = mutable.Seq.fill[Long](9)(0)
-  val file = scala.io.Source.fromFile("./data/6")
-  file.foreach { case c if c != ',' => fish(c - '0') += 1 case _ => }
-  file.close()
+  data.foreach{ case c if c != ',' => fish(c - '0') += 1 case _ => }
 
   (0 until 256).foreach { i =>
     val next = fish(i % 7)

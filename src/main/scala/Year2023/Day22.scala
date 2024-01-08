@@ -1,20 +1,22 @@
 package Year2023
 
-import common.{Pos, Pos3, Surface}
+import common.immutable.{Pos, Volume}
 
-object Day22 extends Year2023(22) {
-  case class Brick(surface: Surface, minZ: Int, maxZ: Int, id: Int) {
-    def height: Int = maxZ - minZ + 1
-    def atZ(z: Int): Brick = Brick(surface, z, z + height - 1, id)
+object Day22 extends common.AoC(22, 2023) {
+  case class Brick(volume: Volume[Int], id: Int) {
+    def surface: Volume[Int] = volume.dropDims(2)
+    def height: Int = volume.max.z - volume.min.z + 1
+    def atZ(z: Int): Brick = Brick(volume.moveTo(2, z), id)
   }
   object Brick {
-    def parse(x: (String, Int)): Brick = x._1.split('~') match {
-      case Array(Pos3(min), Pos3(max)) => Brick(Surface(Pos(min.x, min.y), Pos(max.x, max.y)), min.z, max.z, x._2)
+    def parse(x: (String, Int)): Brick = {
+      val Array(minStr, maxStr) = x._1.split('~')
+      Brick(Volume(Pos.parse(minStr), Pos.parse(maxStr)), x._2)
     }
   }
-  val bricks = data.getLines().zipWithIndex.map(Brick.parse).toArray.sortBy(_.minZ)
-  val area = bricks.foldLeft(Surface(Pos(0,0),Pos(0,0))){(surface, brick) => surface union brick.surface}
-  val ground = Brick(area, minZ=0,maxZ=0,-1)
+  val bricks = data.getLines().zipWithIndex.map(Brick.parse).toArray.sortBy(_.volume.min.z)
+  val area = bricks.foldLeft(Volume(Pos(0,0), Pos(0,0))){(surface, brick) => surface union brick.surface}
+  val ground = Brick(area.expand(0, 0), -1)
 
   case class State(fallen: List[Brick], under: Map[Int, Set[Int]], above: Map[Int,Set[Int]]) {
     // lol memoization is for chumps
@@ -28,8 +30,8 @@ object Day22 extends Year2023(22) {
   }
   val dropped = bricks.foldLeft(State(List(ground),Map.empty, Map.empty)){(prev, brick) =>
     val overlapping = prev.fallen.filter(_.surface overlaps brick.surface)
-    val support = overlapping.maxBy(_.maxZ).maxZ
-    val all = overlapping.filter(_.maxZ == support).map(_.id).toSet
+    val support = overlapping.map(_.volume.max.z).max
+    val all = overlapping.filter(_.volume.max.z == support).map(_.id).toSet
     val map = all.map{name => name -> (prev.above.getOrElse(name,Set.empty) + brick.id)}
     State(brick.atZ(support + 1) +: prev.fallen, prev.under + (brick.id -> all), prev.above ++ map)
   }

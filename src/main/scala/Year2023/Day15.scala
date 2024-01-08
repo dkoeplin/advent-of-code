@@ -2,7 +2,7 @@ package Year2023
 
 import scala.collection.immutable.VectorMap
 
-object Day15 extends Year2023(15) {
+object Day15 extends common.AoC(15, 2023) {
   case class Step(label: String, length: Option[Int]) { val box: Int = hash(label) }
 
   def hash(x: String): Int = x.foldLeft(0){(v, c) => (v + c)*17 % 256 }

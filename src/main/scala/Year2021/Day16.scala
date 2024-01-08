@@ -109,9 +109,8 @@ object Packet {
   }
 }
 
-object Day16 extends App {
-  val file = scala.io.Source.fromFile("./data/16")
-  file.getLines().zipWithIndex.filterNot(_._1.startsWith("#")).foreach{case (line, idx) =>
+object Day16 extends common.AoC(16, 2021) {
+  data.getLines().zipWithIndex.filterNot(_._1.startsWith("#")).foreach{case (line, idx) =>
     println(s"Line ${idx+1}: $line:")
     val binary = line.flatMap{c => Packet.hex(c) }.mkString
     val packets = Packet.parse(binary)

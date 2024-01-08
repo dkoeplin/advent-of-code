@@ -14,9 +14,8 @@ object Range {
     (parse(pair(0)), parse(pair(1)))
   }
 }
-object Day04 extends App {
-  val file = scala.io.Source.fromFile("data/2022/04")
-  val lines = file.getLines().map(Range.parse_pair).toArray
+object Day04 extends common.AoC(4, 2022) {
+  val lines = data.getLines().map(Range.parse_pair).toArray
   val part1 = lines.count{case (a,b) => a.contains(b) || b.contains(a) }
   val part2 = lines.count{case (a,b) => a.overlaps(b) }
   println(s"Part1: $part1")

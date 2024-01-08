@@ -1,6 +1,6 @@
 package Year2023
 
-object Day02 extends Year2023(2) {
+object Day02 extends common.AoC(2, 2023) {
   object Color extends Enumeration {
     val Red, Green, Blue = Value
     private val map = Map[String, Value](("red", Red), ("green", Green), ("blue", Blue))

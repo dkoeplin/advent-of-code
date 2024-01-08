@@ -1,19 +1,19 @@
 package Year2023
 
-import common.Range
+import common.immutable.Range
 
-object Day05 extends Year2023(5) {
+object Day05 extends common.AoC(5, 2023) {
   case class RangeMapping(src: Range, dst: Range) {
-    def apply(i: Long): Long = dst.start - src.start + i
+    def apply(i: Long): Long = dst.min - src.min + i
     def apply(r: Range): Range = if (!src.overlaps(r)) Range.empty else {
       val i = src.intersect(r)
-      Range(dst.start + (i.start - src.start), i.length)
+      Range.at(dst.min + (i.min - src.min), i.length)
     }
     def get(r: Range): Option[Range] = if (src.overlaps(r)) Some(apply(r)) else None
   }
   object RangeMapping {
     def unapply(x: String): Option[RangeMapping] = x.split(' ') match {
-      case Array(dst, src, len) => Some(RangeMapping(Range(src.toLong, len.toLong), Range(dst.toLong, len.toLong)))
+      case Array(dst, src, len) => Some(RangeMapping(Range.at(src.toLong, len.toLong), Range.at(dst.toLong, len.toLong)))
       case _ => None
     }
   }
@@ -48,8 +48,8 @@ object Day05 extends Year2023(5) {
   val part1 = seedIDs.map{seed => maps.foldLeft(seed){(i, map) => map(i) }}.min
   println(s"Part 1: $part1")
 
-  val part2 = seedIDs.grouped(2).map{case Array(start, len) => Range(start, len) }.map{seedRange =>
-    maps.foldLeft(List(seedRange)){(ranges, map) => ranges.flatMap(map.apply) }.map(_.start).min
+  val part2 = seedIDs.grouped(2).map{case Array(start, len) => Range.at(start, len) }.map{seedRange =>
+    maps.foldLeft(List(seedRange)){(ranges, map) => ranges.flatMap(map.apply) }.map(_.min).min
   }.min
   println(s"Part 2: $part2")
 }

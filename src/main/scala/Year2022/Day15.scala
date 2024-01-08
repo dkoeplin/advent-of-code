@@ -2,7 +2,7 @@ package Year2022
 
 import scala.util.matching.Regex
 
-object Day15 extends App {
+object Day15 extends common.AoC(15, 2022) {
   case class Pos(row: Long, col: Long)
   def manhattan(x: Pos, y: Pos): Long = Math.abs(x.row - y.row) + Math.abs(x.col - y.col)
   case class Range(min: Long, max: Long) {
@@ -39,8 +39,7 @@ object Day15 extends App {
     }.getOrElse(throw new Exception(s"Unable to parse $line"))
   }
 
-  val file = scala.io.Source.fromFile("data/2022/15")
-  val pairs = file.getLines().map(Pair.parse).toArray.sortBy(_.sensor.col)
+  val pairs = data.getLines().map(Pair.parse).toArray.sortBy(_.sensor.col)
   val xrange = pairs.foldLeft(pairs.head.xrange){(curr,pair) => curr merge pair.xrange }
 
   def covered(y: Long): Long = xrange.iterator.count{x => pairs.exists(_.covered(Pos(y, x))) }

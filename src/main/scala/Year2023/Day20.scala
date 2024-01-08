@@ -2,7 +2,7 @@ package Year2023
 
 import common.math
 
-object Day20 extends Year2023(20) {
+object Day20 extends common.AoC(20, 2023) {
   // Flip Flop(%): High: nothing, Low(0): (1, high), Low(1): (0, low)
   // Conjunction(&): all prev high: low, else: high
   // Broadcaster: forwards pulse to all destinations

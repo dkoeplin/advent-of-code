@@ -1,6 +1,6 @@
 package Year2022
 
-object Day02 extends App {
+object Day02 extends common.AoC(2, 2022) {
   val Lose: Int = 0
   val Draw: Int = 3
   val Win: Int = 6
@@ -48,8 +48,7 @@ object Day02 extends App {
     }
   }
 
-  val file = scala.io.Source.fromFile("data/2022/02")
-  val lines = file.getLines()
+  val lines = data.getLines()
   val part1 = lines.map{case GamePart1(a, b) => score(a, b) + b }.sum
   println(s"Total: $part1")
   val part2 = lines.map{case GamePart2(a, b) => score(a, b) + b }.sum

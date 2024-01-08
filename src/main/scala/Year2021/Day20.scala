@@ -1,22 +1,22 @@
 package Year2021
 
-import common.mutable.Matrix
+import common.immutable.Pos.Idx
+import common.immutable.{Matrix, Volume}
 
-object Day20 extends App {
-  val window = Seq((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 0), (0, 1), (1, -1), (1, 0), (1, 1))
+object Day20 extends common.AoC(20, 2021) {
+  val window = Volume(Idx(-1,-1), Idx(1,1))
 
-  val file = io.Source.fromFile("./data/20")
-  val lines = file.getLines()
-  val table: Array[Int] = lines.next().map { case '#' => 1 case '.' => 0 }.toArray
-  val data = lines.filter(_.nonEmpty).map { line => line.map { case '#' => 1 case '.' => 0 } }
-  val input: Matrix[Int] = Matrix(data)
+  val lines = data.getLines()
+  val table = lines.next().map{case '#' => 1 case '.' => 0}.toArray
+  val input = Matrix(lines.filter(_.nonEmpty).map{line => line.map{case '#' => 1 case '.' => 0 }})
 
-  def enhance(x: Matrix[Int], default: Int): Matrix[Int] = Matrix((-1 to x.rows).iterator.map { i =>
-    (-1 to x.cols).map { j =>
-      val w = window.map { case (di, dj) => x.getOrElse(i + di, j + dj, default) }.mkString("")
-      table(Integer.parseInt(w, 2))
+  def enhance(x: Matrix[Int], default: Int): Matrix[Int] = {
+    val volume = Volume(Idx(-1,-1), Idx(x.H,x.W))
+    val data = volume.iterator.map{p =>
+      table(Integer.parseInt(window.iterator.map(_ + p).map{p => x.getOrElse(p, default) }.mkString, 2))
     }
-  })
+    Matrix(volume, data.toArray)
+  }
 
   def enhanceN(x: Matrix[Int], steps: Int): Matrix[Int] = {
     (0 until steps).foldLeft(x) { case (mat, i) =>

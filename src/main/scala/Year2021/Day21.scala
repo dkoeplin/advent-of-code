@@ -2,13 +2,12 @@ package Year2021
 
 import scala.collection.mutable
 
-object Day21 extends App {
+object Day21 extends common.AoC(21, 2021) {
   case class Player(var square: Int, var score: Int = 0)
 
   val PlayerStart = "Player . starting position: ([0-9]+)".r
-  val file = io.Source.fromFile("./data/21")
-  val lines = file.getLines()
-  val starts = lines.map { case PlayerStart(v) => v.toInt - 1 }.toArray
+  val lines = data.getLines()
+  val starts = lines.map{case PlayerStart(v) => v.toInt - 1 }.toArray
 
   var rolls = 0
   var turn = 0

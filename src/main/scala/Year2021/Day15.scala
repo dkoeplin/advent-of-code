@@ -2,10 +2,9 @@ package Year2021
 
 import scala.collection.mutable
 
-object Day15 extends App {
+object Day15 extends common.AoC(15, 2021) {
   val Rule = "([A-Z])([A-Z]) -> ([A-Z])".r
-  val file = scala.io.Source.fromFile("./data/15")
-  val grid: Array[Array[Int]] = file.getLines().map(_.map(_ - '0').toArray).toArray
+  val grid: Array[Array[Int]] = data.getLines().map(_.map(_ - '0').toArray).toArray
   val tileRows = grid.length
   val tileCols = grid(0).length
 

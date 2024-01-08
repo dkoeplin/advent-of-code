@@ -1,6 +1,6 @@
 package Year2021
 
-import common.Pos
+import common.immutable.Pos
 
 import scala.collection.mutable
 import scala.util.Try
@@ -12,22 +12,21 @@ case class Board(id: Int, board: Seq[Seq[Int]]) {
   val rows: mutable.Seq[Int] = mutable.Seq.fill(numCols)(0)
   val cols: mutable.Seq[Int] = mutable.Seq.fill(numRows)(0)
 
-  def posOf(x: Int): Option[Pos] = board.zipWithIndex.flatMap{case (row,idx) =>
-    Some(Pos(idx, row.indexOf(x))).filter(_.col != -1)
+  def posOf(x: Int): Option[Pos[Int]] = board.zipWithIndex.flatMap{case (row,idx) =>
+    Some(Pos(idx, row.indexOf(x))).filter(_.h != -1)
   }.headOption
 
   def register(x: Int): Boolean = posOf(x).exists{pos =>
-    rows(pos.row) += 1
-    cols(pos.col) += 1
+    rows(pos.h) += 1
+    cols(pos.w) += 1
     score = score - x
-    println(s"Year2021.Board $id: $x at (${pos.row}, ${pos.col}) (row: ${rows(pos.row)} / $numRows, col: ${cols(pos.col)} / $numCols)")
-    rows(pos.row) == numRows || cols(pos.col) == numCols
+    println(s"Year2021.Board $id: $x at (${pos.h}, ${pos.w}) (row: ${rows(pos.h)} / $numRows, col: ${cols(pos.w)} / $numCols)")
+    rows(pos.h) == numRows || cols(pos.w) == numCols
   }
 }
 
-object Day04 extends App {
-  val file = scala.io.Source.fromFile("./data/4")
-  val lines = file.getLines()
+object Day04 extends common.AoC(4, 2023) {
+  val lines = data.getLines()
 
   val numbers = lines.next().split(",").flatMap(str => if (str.isEmpty) None else Some(str.toInt))
   var boards: Set[Board] = Set.empty

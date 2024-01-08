@@ -1,6 +1,6 @@
 package Year2022
 
-object Day10 extends App {
+object Day10 extends common.AoC(10, 2022) {
   val WIDTH = 40
   def str(x: Int, cycles: Int): Int = if ((cycles - 20) % 40 == 0) x * cycles else 0
   case class State(during: Int = 1, next: Int = 1, cycles: Int = 0, sum: Int = 0) {
@@ -10,8 +10,7 @@ object Day10 extends App {
     def addx(v: Int): State = State(next, next + v, cycles + 1, sum + str(next, cycles + 1))
   }
 
-  val file = scala.io.Source.fromFile("data/2022/10")
-  val scan = file.getLines().scanLeft(List(State())){(state, line) =>
+  val scan = data.getLines().scanLeft(List(State())){(state, line) =>
     if (line.startsWith("addx")) {
       val c0 = state.last.noop()
       val c1 = c0.addx(line.drop(5).toInt)

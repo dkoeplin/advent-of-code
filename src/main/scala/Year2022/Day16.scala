@@ -1,7 +1,6 @@
 package Year2022
 
-import scala.util.matching.Regex
-object Day16 extends App {
+object Day16 extends common.AoC(16, 2022) {
   case class Node(name: String, rate: Int, neighbors: Array[String])
   object Node {
     private val pattern = "Valve ([A-Z][A-Z]) has flow rate=([0-9]+); tunnels? leads? to valves? (.*)".r
@@ -13,8 +12,7 @@ object Day16 extends App {
     }.getOrElse(throw new Exception(s"Unable to parse $line"))
   }
 
-  val file = scala.io.Source.fromFile("data/2022/16")
-  val graph: Map[String, Node] = file.getLines().map(Node.parse).toArray.groupBy(_.name).view.mapValues(_.head).toMap
+  val graph: Map[String, Node] = data.getLines().map(Node.parse).toArray.groupBy(_.name).view.mapValues(_.head).toMap
   val distances = scala.collection.mutable.Map.empty[(String, String), Seq[String]]
   def path(a: String, b: String): Seq[String] = distances.getOrElse((a,b), {
     case class Vertex(node: String, dist: Int)

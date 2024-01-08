@@ -1,6 +1,6 @@
 package Year2023
 
-object Day04 extends Year2023(4) {
+object Day04 extends common.AoC(4, 2023) {
   case class Card(win: Set[Int], has: Set[Int]) {
     val matching: Int = has.count(win.contains)
     val points: Long = if (matching > 0) 1L << (matching - 1) else 0L

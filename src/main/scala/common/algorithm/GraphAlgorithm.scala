@@ -18,5 +18,5 @@ case class Paths[T](start: T, dist: Map[T, Int], prev: Map[T, T]) {
 abstract class GraphAlgorithm[T] {
   def isEnd(v: T): Boolean
   def next(v: T): Iterator[T]
-  def weight(v: T): Int
+  def weight(v: T): Int = 1
 }

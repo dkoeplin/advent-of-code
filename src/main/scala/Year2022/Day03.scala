@@ -1,10 +1,9 @@
 package Year2022
 
-object Day03 extends App {
+object Day03 extends common.AoC(3, 2022) {
   def priority(x: Char) = if (x.isLower) x - 'a' + 1 else x - 'A' + 27
 
-  val file = scala.io.Source.fromFile("data/2022/03")
-  val lines = file.getLines().toArray
+  val lines = data.getLines().toArray
   val part1 = lines.map{line =>
     val c1 = line.substring(0, line.length/2).toSet
     val c2 = line.substring(line.length/2, line.length).toSet

@@ -14,4 +14,6 @@ package object math {
 
   // Sum over just the odd numbers in [1,n] (inclusive)
   def sumOverOdd(n: Long): Long = sumOver(n) - sumOverEven(n)
+
+  def signum(x: Int): Int = if (x == 0) 0 else if (x > 0) 1 else -1
 }

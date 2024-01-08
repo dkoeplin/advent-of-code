@@ -1,6 +1,6 @@
 package Year2023
 
-object Day08 extends Year2023(8) {
+object Day08 extends common.AoC(8, 2023) {
   private val LR = Map('L' -> 0, 'R' -> 1)
   object Node {
     private val lr = "(...) = \\((...), (...)\\)".r

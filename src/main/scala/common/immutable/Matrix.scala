@@ -1,107 +1,49 @@
 package common.immutable
 
-import common.Pos
-import scala.collection.mutable
-import scala.reflect.ClassTag
+import common.immutable.Pos.Idx
 
-class Matrix[T](vs: Iterator[Iterable[T]]) {
-  val data: Array[Seq[T]] = vs.map{vs => Seq.empty[T] ++ vs }.toArray
-  val rows: Int = data.length
-  val cols: Int = if (data.nonEmpty) data(0).length else 0
-  def has(pos: Pos): Boolean = get(pos).nonEmpty
-  def get(i: Int, j: Int): Option[T] = if (i >= 0 && i < rows && j >= 0 && j < cols) { Some(data(i)(j)) } else None
-  def get(pos: Pos): Option[T] = get(pos.row, pos.col)
-  def getOrElse(i: Int, j: Int, default: => T): T = get(i, j).getOrElse(default)
-  def getOrElse(pos: Pos, default: => T): T = get(pos).getOrElse(default)
-  def apply(i: Int, j: Int): T = data(i)(j)
-  def apply(pos: Pos): T = data(pos.row)(pos.col)
-  def contains(pos: Pos): Boolean = get(pos).nonEmpty
+class Matrix[A](volume: Volume[Int], data: Array[A]) extends Tensor[A](volume, data) {
+  def wIterator: Iterator[Int] = volume.cols.iterator.map(_.x)
+  def hIterator: Iterator[Int] = volume.rows.iterator.map(_.x)
 
-  def colIndices: Iterator[Int] = (0 until cols).iterator
-  def rowIndices: Iterator[Int] = (0 until rows).iterator
+  def rows: Iterator[Iterator[A]] = hIterator.map{i => row(i) }
+  def cols: Iterator[Iterator[A]] = wIterator.map{j => col(j) }
 
-
-  def iterateOverRows(reverse: Boolean = false): Iterator[Iterator[T]]
-    = (0 until rows).iterator.map{i => row(i, reverse) }
-  def iterateOverCols(reverse: Boolean = false): Iterator[Iterator[T]]
-    = (0 until cols).iterator.map{j => col(j, reverse) }
-
-  def row(i: Int, reverse: Boolean = false): Iterator[T]
-    = (if (reverse) (0 until cols).reverseIterator else (0 until cols).iterator).map{j => apply(i, j) }
-  def col(j: Int, reverse: Boolean = false): Iterator[T]
-    = (if (reverse) (0 until rows).reverseIterator else (0 until rows).iterator).map{i => apply(i, j) }
-
-  def indices(): Seq[(Int,Int)] = (0 until rows).flatMap{i => (0 until cols).map{j => (i,j) }}
-
-  def posIterator(): Iterator[Pos] = (0 until rows).iterator.flatMap{i => (0 until cols).map{j => Pos(i,j) }}
-  def reverseIterator: Iterator[Pos] = (rows - 1 to 0 by -1).iterator.flatMap{i => (cols - 1 to 0 by -1).map{j => Pos(i,j) }}
-
-  def mapIndices[R](func: (Int,Int) => R): Matrix[R] = Matrix(
-    (0 until rows).iterator.map{i =>
-      (0 until cols).map{j => func(i,j) }
-    }
-  )
-  def mapPos[R](func: Pos => R): Matrix[R] = Matrix(
-    (0 until rows).iterator.map{i =>
-      (0 until cols).map{j => func(Pos(i, j)) }
-    }
-  )
-
-  def follow(start: Pos, delta: Pos): Iterator[Pos] = {
-    val dR = if (delta.row == 0) 1 else delta.row
-    val dC = if (delta.col == 0) 1 else delta.col
-    (start.row to start.row + delta.row by dR).iterator.flatMap{i =>
-      (start.col to start.col + delta.col by dC).iterator.map{j => Pos(i, j) }
-    }
-  }
-
-  def find(cond: T => Boolean): Option[Pos] = posIterator().find{p => cond(apply(p)) }
-
-  def sum(implicit num: Numeric[T], ct: ClassTag[T]): T = data.map(_.reduce(num.plus)).reduce(num.plus)
-
-  def t: Iterator[Iterable[T]] = (0 until cols).iterator.map{j =>
-    (0 until rows).map{i => apply(i, j) }
-  }
+  def row(i: Int): Iterator[A] = volume.alter(rank - 2, i, i).iterator.map(apply)
+  def col(j: Int): Iterator[A] = volume.alter(rank - 1, j, j).iterator.map(apply)
 
   /// Create a new (printable) Matrix using the function func on every position in this matrix.
-  def printed(func: Pos => Char): Matrix[Char] = Matrix[Char]{
-    (0 until rows).iterator.map{r =>
-      (0 until cols).map{c => func(Pos(r, c)) }
-    }
-  }
+  def printable(func: A => Char): Matrix[Char] = new Matrix[Char](volume, iterator.map(func).toArray)
 
   /// Create a new annotated, printable Matrix using the function func on every position in this matrix.
   /// Adds row and column label numbers for help with debugging.
-  def annotated(func: Pos => Char): Matrix[Char] = Matrix[Char]{
-    val colsLog10 = Math.ceil(Math.log10(cols)).toInt
-    val rowsLog10 = Math.ceil(Math.log10(rows)).toInt
-    val paddedRows = rows + colsLog10
-    val paddedCols = cols + rowsLog10
-    (0 until paddedRows).iterator.map{r =>
-      lazy val rStr = (r - 2).toString
-      lazy val rPad = " "*(rowsLog10-rStr.length) + rStr
-      (0 until paddedCols).map{c =>
-        lazy val cStr = (c - 2).toString
-        lazy val cPad = " "*(colsLog10-cStr.length) + cStr
-        if (r < colsLog10 && c < rowsLog10) ' '
-        else if (r < colsLog10) cPad.charAt(r)
-        else if (c < rowsLog10) rPad.charAt(c)
-        else func(Pos(r - colsLog10, c - rowsLog10))
-      }
-    }
+  def annotated(func: Idx => Char): Matrix[Char] = {
+    val log10W = Math.ceil(Math.log10(W)).toInt
+    val log10H = Math.ceil(Math.log10(H)).toInt
+    val paddedH = H + log10W
+    val paddedW = W + log10H
+    val volume = Volume[Int](Pos(0, 0), Pos(paddedH, paddedW))
+    new Matrix[Char](volume, volume.iterator.map{case Pos(h, w) =>
+      lazy val hStr = (h - 2).toString
+      lazy val hPad = " " * (log10H - hStr.length) + hStr
+      lazy val wStr = (w - 2).toString
+      lazy val wPad = " " * (log10W - wStr.length) + wStr
+      if (h < log10W && w < log10H) ' '
+      else if (h < log10W) wPad.charAt(h)
+      else if (w < log10H) hPad.charAt(w)
+      else func(Idx(h - log10W, w - log10H))
+    }.toArray)
   }
 
-  override def toString: String = data.map{vs => vs.map{x => Matrix.digit(x)}.mkString("")}.mkString("\n")
+  override def toString: String = data.grouped(W).map{_.map(Matrix.digit).mkString("")}.mkString("\n")
 }
-object Matrix {
-  def apply[T](vs: Iterator[Iterable[T]]): Matrix[T] = new Matrix(vs)
-  def empty[T](rows: Int, cols: Int, default: T): Matrix[T] = new Matrix((0 until rows).iterator.map{i =>
-    Iterable.fill(cols)(default)
-  })
+
+object Matrix extends StaticTensorOps[Matrix] {
+  override def apply[A](volume: Volume[Int], data: Array[A]): Matrix[A] = new Matrix(volume, data)
+  implicit def matrixIsConstructible[A]: Constructible[A,Matrix[A]] = Matrix.apply
+
   def digit[T](x: T): String = x match {
     case x: Int => val str = Integer.toHexString(x); if (str.length > 1) "N" else str
     case _ => x.toString
   }
-
-
 }

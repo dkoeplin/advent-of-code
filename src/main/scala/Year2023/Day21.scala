@@ -1,26 +1,25 @@
 package Year2023
 
-import common.Pos
-import common.math
-import common.immutable.Matrix
-import common.algorithm.Dijkstra
+import common.immutable.Pos.Idx
+import common.immutable.{Constructible, Matrix, Volume}
+import common.{math, parse}
 
-object Day21 extends Year2023(21) {
-  class GardenMap(iter: Iterator[Iterable[Char]]) extends Matrix[Char](iter) {
-    lazy val start: Pos = posIterator().find { p => apply(p) == 'S' }.get
-    def next(p: Pos): Iterator[Pos]
-      = Pos.nondiag.iterator.map(_ + p).filter { p => get(p).exists { c => c == '.' || c == 'S' } }
+object Day21 extends common.AoC(21, 2023) {
+  case class GardenMap(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
+    lazy val start: Idx = indices.find{p => apply(p) == 'S' }.get
+    def next(p: Idx): Iterator[Idx]
+      = Idx.D2.nondiag.iterator.map(_ + p).filter { p => get(p).exists { c => c == '.' || c == 'S' } }
 
-    def reachable(begin: Pos, n: Int): Set[Pos] = (1 to n).foldLeft(Set(begin)){(f,_) => f.flatMap(next) }
+    def reachable(begin: Idx, n: Int): Set[Idx] = (1 to n).foldLeft(Set(begin)){ (f, _) => f.flatMap(next) }
 
     def reachableAt(n: Int): Unit = {
       val stepsIsOdd = n%2 == 0
-      val tiles = posIterator().filter{p => apply(p) == '.' || apply(p) == 'S' }.toList
+      val tiles = indices.filter{p => apply(p) == '.' || apply(p) == 'S' }.toList
       val nOddTiles = tiles.count{p => (p dist start) % 2 == 1 }
       val nEvenTiles = tiles.size - nOddTiles
       // Everything within ceil(n / cols) should be reachable probably
-      val radius = ((n - cols/2) / cols) - 1// number of maps we can traverse in one direction
-      val remain = n - radius*cols - cols/2
+      val radius = ((n - W/2) / W) - 1// number of maps we can traverse in one direction
+      val remain = n - radius*W - W/2
       val reach = math.sumOver(remain) // number of tiles we could reach in remaining N steps
       // sum(1 to radius + 1) + sum(1 to radius - 1)
       val fullyReachable = 4*math.sumOver(radius) + 1
@@ -34,20 +33,20 @@ object Day21 extends Year2023(21) {
         else            totalOdd*nOddTiles + totalEven*nEvenTiles
       }
       val partialMaps = {
-        val top = reachable(Pos(rows - 1, start.col), remain).size.toLong
-        val bottom = reachable(Pos(0, start.col), remain).size.toLong
-        val left = reachable(Pos(start.row, cols - 1), remain).size.toLong
-        val right = reachable(Pos(start.row, 0), remain).size.toLong
-        val top_left = radius * reachable(Pos(rows - 1, cols - 1), remain).size.toLong
-        val top_right = radius * reachable(Pos(rows - 1, 0), remain).size.toLong
-        val bottom_left = radius * reachable(Pos(0, cols - 1), remain).size.toLong
-        val bottom_right = radius * reachable(Pos(0, 0), remain).size.toLong
+        val top = reachable(Idx(H - 1, start.w), remain).size.toLong
+        val bottom = reachable(Idx(0, start.w), remain).size.toLong
+        val left = reachable(Idx(start.h, W - 1), remain).size.toLong
+        val right = reachable(Idx(start.h, 0), remain).size.toLong
+        val top_left = radius * reachable(Idx(H - 1, W - 1), remain).size.toLong
+        val top_right = radius * reachable(Idx(H - 1, 0), remain).size.toLong
+        val bottom_left = radius * reachable(Idx(0, W - 1), remain).size.toLong
+        val bottom_right = radius * reachable(Idx(0, 0), remain).size.toLong
         top + bottom + left + right + top_left + top_right + bottom_left + bottom_right
       }
 
-      // val density = (tiles.toDouble / cols*rows)
+      // val density = (tiles.toDouble / cols*H)
       println(s"Partial: $partialMaps")
-      println(s"Tiles: ${tiles.size}, rows:$rows, cols:$cols, radius:$radius, remain:$remain, reach:$reach, full:$fullyReachable")
+      println(s"Tiles: ${tiles.size}, rows:$H, cols:$W, radius:$radius, remain:$remain, reach:$reach, full:$fullyReachable")
       println(s"Even Tiles: $nEvenTiles, Odd Tiles: $nOddTiles (check: ${nEvenTiles + nOddTiles} == ${tiles.size})")
       println(s"Even repeats: $totalEven, Odd Repeats: $totalOdd (check: ${totalEven + totalOdd} == $fullyReachable)")
       println(s"Guess: ${fullMaps + partialMaps}")
@@ -57,10 +56,11 @@ object Day21 extends Year2023(21) {
       println(s"Prev2: 639126042932833 (?)")
     }
   }
+  implicit object GardenMap extends Constructible[Char,GardenMap]
 
 
 
-  val map = new GardenMap(data.getLines().map(_.toArray))
+  val map = parse.chars(data).to[GardenMap]
   // map.reachableAt(5000)
   map.reachableAt(26501365)
 

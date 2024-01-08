@@ -1,22 +1,22 @@
 package Year2023
 
-import common.Pos
+import common.immutable.Pos
 
-object Day03 extends Year2023(3) {
+object Day03 extends common.AoC(3, 2023) {
   private val number = "[0-9]+".r
   trait Feature {
-    def start: Pos
+    def start: Pos[Long]
     def len: Int
-    def posList: Iterator[Pos] = (0 until len).iterator.map{j => Pos(start.row, start.col + j) }
-    def surrounding: Iterator[Pos] = Seq(start.row - 1, start.row + 1).iterator.flatMap { i =>
-      (start.col - 1 to start.col + len).map { j => Pos(i, j) }
-    } ++ Seq(Pos(start.row, start.col - 1), Pos(start.row, start.col + len))
+    def posList: Iterator[Pos[Long]] = (0 until len).iterator.map{j => Pos(start.h, start.w + j) }
+    def surrounding: Iterator[Pos[Long]] = Seq(start.h - 1, start.h + 1).iterator.flatMap { i =>
+      (start.w - 1 to start.w + len).map{ j => Pos(i, j) }
+    } ++ Seq(Pos(start.h, start.w - 1), Pos(start.h, start.w + len))
   }
-  case class Symbol(value: Char, start: Pos) extends Feature { def len: Int = 1 }
+  case class Symbol(value: Char, start: Pos[Long]) extends Feature { def len: Int = 1 }
   // A symbol is any non-digit that isn't a period
   implicit class CharMethods(x: Char) { def isSymbol: Boolean = !x.isDigit && x != '.' }
 
-  case class Number(value: Long, start: Pos, len: Int) extends Feature
+  case class Number(value: Long, start: Pos[Long], len: Int) extends Feature
 
   // Memoize the position of numbers and symbols in two sets
   val (numbers, symbols) = data.getLines().zipWithIndex
@@ -34,7 +34,7 @@ object Day03 extends Year2023(3) {
   println(s"Part 1: $part1")
 
   // All * symbols with exactly two adjacent numbers
-  val numMap: Map[Pos, Number] = numbers.flatMap{n => n.posList.map{p => p -> n}}.toMap
+  val numMap: Map[Pos[Long], Number] = numbers.flatMap{ n => n.posList.map{ p => p -> n}}.toMap
   val part2 = symbols.iterator.filter(_.value == '*').flatMap{sym =>
     val adjacent = sym.surrounding.flatMap(numMap.get).toSet
     if (adjacent.size == 2) Some(adjacent.map(_.value).product) else None

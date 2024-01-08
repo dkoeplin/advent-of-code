@@ -1,34 +1,30 @@
 package Year2021
 
+import common.immutable.Pos.Idx
 
-case class Position(horizontal: Int = 0, vertical: Int = 0) {
-  def up(dist: Int): Position = Position(horizontal, vertical - dist)
-  def down(dist: Int): Position = Position(horizontal, vertical + dist)
-  def forward(dist: Int): Position = Position(horizontal + dist, vertical)
-}
-
-case class Position2(horizontal: Int = 0, vertical: Int = 0, aim: Int = 0) {
-  def up(dist: Int): Position2 = Position2(horizontal, vertical, aim - dist)
-  def down(dist: Int): Position2 = Position2(horizontal, vertical, aim + dist)
-  def forward(dist: Int): Position2 = Position2(horizontal + dist, vertical + aim*dist, aim)
-}
-
-object Day02 extends App {
-  val file = scala.io.Source.fromFile("./data/2")
-  val lines = file.getLines().toArray
-  file.close()
-
-  val part1 = lines.foldLeft(Position()){
-    case (pos, cmd) if cmd.startsWith("forward") => pos.forward(cmd.drop(8).toInt)
-    case (pos, cmd) if cmd.startsWith("down") => pos.down(cmd.drop(5).toInt)
-    case (pos, cmd) if cmd.startsWith("up") => pos.up(cmd.drop(3).toInt)
+object Day02 extends common.AoC(2, 2021) {
+  case class Position2(pos: Idx = Idx(0,0), aim: Int = 0) {
+    def move(cmd: Idx): Position2 = cmd match {
+      case Idx(v, 0) => Position2(pos, aim + v)
+      case Idx(0, v) => Position2(Idx(pos.x + aim*v, pos.y + v), aim)
+      case _ => this
+    }
   }
-  println(s"Part 1: ${part1.horizontal * part1.vertical}")
 
-  val position = lines.foldLeft(Position2()){
-    case (pos, cmd) if cmd.startsWith("forward") => pos.forward(cmd.drop(8).toInt)
-    case (pos, cmd) if cmd.startsWith("down") => pos.down(cmd.drop(5).toInt)
-    case (pos, cmd) if cmd.startsWith("up") => pos.up(cmd.drop(3).toInt)
+  object Command {
+    def unapply(x: String): Option[Idx] = x.trim.split(' ') match {
+      case Array("forward", n) => Some(Idx.D2.R * n.toInt)
+      case Array("down", n) => Some(Idx.D2.D * n.toInt)
+      case Array("up", n) => Some(Idx.D2.U * n.toInt)
+      case _ => None
+    }
   }
-  println(s"Part 2: ${position.horizontal * position.vertical}")
+
+  val lines = data.getLines().flatMap(Command.unapply).toArray
+
+  val part1 = lines.foldLeft(Idx(0,0)){(pos, cmd) => pos + cmd}
+  println(s"Part 1: ${part1.product}")
+
+  val part2 = lines.foldLeft(Position2()){(pos, cmd) => pos.move(cmd) }
+  println(s"Part 2: ${part2.pos.product}")
 }

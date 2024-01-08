@@ -1,6 +1,6 @@
 package Year2022
 
-object Day19 extends App {
+object Day19 extends common.AoC(19, 2022) {
   val times = scala.collection.mutable.Map.empty[String, Long]
   def time[T](name: String)(x: => T): T = {
     val start = System.currentTimeMillis()
@@ -156,8 +156,7 @@ object Day19 extends App {
     }}.maxBy(_.x(Resource.Geode))
   }
 
-  val file = scala.io.Source.fromFile("data/2022/19")
-  val blueprints = file.getLines().map(Blueprint.parse).toArray
+  val blueprints = data.getLines().map(Blueprint.parse).toArray
 
   val part1 = blueprints.zipWithIndex.map{case (blueprint, i) =>
     val end = maxGeodes(blueprint, maxT = 24)

@@ -2,7 +2,7 @@ package Year2022
 
 import scala.collection.mutable
 
-class Monkey(_id: Long, initial: Seq[Long], op: Long => Long, div: Long, next: Long => Int) {
+class Monkey(_id: Long, initial: Array[Long], op: Long => Long, div: Long, next: Long => Int) {
   val id: Long = _id
   val items: mutable.Queue[Long] = mutable.Queue.empty[Long] ++ initial
   val inspect: Long => Long = op
@@ -58,10 +58,9 @@ object Monkey {
   }
 }
 
-object Day11 extends App {
+object Day11 extends common.AoC(11, 2022) {
   def rounds(n: Int)(divide: Array[Monkey] => Long => Long): Unit = {
-    val file = scala.io.Source.fromFile("data/2022/11")
-    val lines = file.getLines()
+    val lines = data.getLines()
     val monkeys: Array[Monkey] = Monkey.parseAll(lines)
     val divider = divide(monkeys)
     (1 to n).foreach { round =>

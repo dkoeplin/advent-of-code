@@ -1,34 +1,22 @@
 package Year2022
 
-object Day09 extends App {
-  case class Pos(row: Int, col: Int) {
-    def +(dir: Char): Pos = dir match {
-      case 'L' => Pos(row, col - 1)
-      case 'R' => Pos(row, col + 1)
-      case 'U' => Pos(row - 1, col)
-      case 'D' => Pos(row + 1, col)
-    }
+import common.immutable.Pos.Idx
 
-    def -(rhs: Pos): Pos = Pos(row - rhs.row, col - rhs.col)
+object Day09 extends common.AoC(9, 2022) {
+  case class State(chain: List[Idx], visited: Set[Idx])
 
-    def +(rhs: Pos): Pos = Pos(row + rhs.row, col + rhs.col)
-  }
+  val lines = data.getLines().toArray
 
-  case class State(chain: List[Pos], visited: Set[Pos])
-
-  val file = scala.io.Source.fromFile("data/2022/09")
-  val lines = file.getLines().toArray
-
-  def move(head: Pos, tail: Pos) = {
+  def move(head: Idx, tail: Idx): Idx = {
     val diff = head - tail
-    if (Math.abs(diff.row) <= 1 && Math.abs(diff.col) <= 1)
-      Pos(0, 0)
+    if (Math.abs(diff.h) <= 1 && Math.abs(diff.w) <= 1)
+      Idx(0, 0)
     else
-      Pos(Math.signum(diff.row).toInt, Math.signum(diff.col).toInt)
+      Idx(math.signum(diff.h), math.signum(diff.w))
   }
   def compute(n: Int): Int = {
-    val chain = List.fill(n){ Pos(0, 0) }
-    val start = State(chain, Set(Pos(0, 0)))
+    val chain = List.fill(n){ Idx(0, 0) }
+    val start = State(chain, Set(Idx(0, 0)))
     val end = lines.foldLeft(start) { case (state, line) =>
       (0 until line.drop(2).toInt).foldLeft(state) { case (state, _) =>
         val h = state.chain.head + line.head

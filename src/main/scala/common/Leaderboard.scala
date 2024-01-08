@@ -30,7 +30,7 @@ object Records {
 
 object Leaderboard extends App {
   val site = "https://adventofcode.com/2023/leaderboard/day"
-  (1 to 15).iterator.foreach{day =>
+  (1 to 25).iterator.foreach{day =>
     val page = Page(s"$site/$day").contents
     val records = Records.parse(s"$page/$day")
     println(s"$day, ${records.min}, ${records.avg}, ${records.max}")

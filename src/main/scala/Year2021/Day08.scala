@@ -1,18 +1,16 @@
 package Year2021
 
-object Day08 extends App {
-  val nums = Seq("abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg")
-  val reverseDictionary: Map[String, Int] = nums.zipWithIndex.map { case (word, v) => word -> v }.toMap
+object Day08 extends common.AoC(8, 2021) {
+  val nums = Array("abcefg", "cf", "acdeg", "acdfg", "bcdf", "abdfg", "abdefg", "acf", "abcdefg", "abcdfg")
+  val reverseDictionary: Map[String, Int] = nums.zipWithIndex.map{case (word, v) => word -> v }.toMap
 
-  def signature(c: Char, words: Seq[String]): List[Int] = words.groupBy(_.length).map { case (len, ws) => len -> ws.map {
-    _.count(_ == c)
-  }.sum
-  }.toList.sortBy(_._1).map(_._2)
+  def signature(c: Char, words: Array[String]): List[Int]
+    = words.groupBy(_.length).map{case (len, ws) => len -> ws.map {_.count(_ == c) }.sum}
+                             .toList.sortBy(_._1).map(_._2)
 
-  val signatureMap: Map[List[Int], Char] = ('a' to 'g').map { c => signature(c, nums) -> c }.toMap
+  val signatureMap: Map[List[Int], Char] = ('a' to 'g').map{c => signature(c, nums) -> c }.toMap
 
-  val file = scala.io.Source.fromFile("./data/8")
-  val count = file.getLines().foldLeft((0, 0)) { (accum, line) =>
+  val count = data.getLines().foldLeft((0, 0)){(accum, line) =>
     val input = line.split(" \\| ")
     val unique = input(0).split(" ")
     val output = input(1).split(" ")

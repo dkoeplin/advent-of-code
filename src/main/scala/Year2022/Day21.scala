@@ -1,13 +1,13 @@
 package Year2022
 
 
-object Day21 extends App {
+object Day21 extends common.AoC(21, 2022) {
   class Rational(x: BigInt, y: BigInt) {
     private val g: BigInt = x.gcd(y).abs
     private val neg: Boolean = (x < 0) != (y < 0)
     val a: BigInt = if (neg) -x.abs / g else x.abs / g
     val b: BigInt = y.abs / g
-    def unary_-(): Rational = Rational(-x, y)
+    def unary_- : Rational = Rational(-x, y)
     def +(rhs: Rational): Rational = Rational(a * rhs.b + rhs.a * b, b * rhs.b)
     def -(rhs: Rational): Rational = Rational(a * rhs.b - rhs.a * b, b * rhs.b)
     def *(rhs: Rational): Rational = Rational(a * rhs.a, b * rhs.b)
@@ -29,7 +29,7 @@ object Day21 extends App {
   // (A*X + b)/D
   class Symbol(components: Map[Int, Rational]) {
     val xs: Map[Int, Rational] = components.filter{x => x._2 != Rational.zero || x._1 == 0 }
-    def unary_-(): Symbol = Symbol(xs.view.mapValues{x => -x}.toMap)
+    def unary_- : Symbol = Symbol(xs.view.mapValues{x => -x}.toMap)
     def zip(rhs: Symbol)(func: (Rational, Rational) => Rational): Symbol = Symbol((xs.keySet ++ rhs.xs.keySet).map { e =>
       e -> func(xs.getOrElse(e, Rational.zero), rhs.xs.getOrElse(e, Rational.zero))
     }.toMap)
@@ -101,8 +101,7 @@ object Day21 extends App {
     }
   }
 
-  val file = scala.io.Source.fromFile("data/2022/21")
-  val lines = file.getLines().map(Monkey.parse).toArray
+  val lines = data.getLines().map(Monkey.parse).toArray
 
   def part1(): Unit = {
     val done = scala.collection.mutable.Map.empty[String, Symbol]

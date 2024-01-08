@@ -1,13 +1,17 @@
 package Year2021
 
-import common.Directions
-import common.Directions._
-
 import scala.collection.mutable
 
-case class Trace(path: List[Dir], x: Either[Int,Pair]) {
-  def pair: Pair = x.toOption.get
+object Directions extends Enumeration {
+  sealed trait Dir
+  case object L extends Dir
+  case object R extends Dir
+  def flip(dir: Dir): Dir = if (dir == L) R else L
+}
 
+import Year2021.Directions._
+
+case class Trace(path: List[Dir], x: Either[Int,Pair]) {
   def left(n: Int = -1): Trace = x match {
     case Left(_) => this
     case Right(pair) => pair.left(path, n)
@@ -171,7 +175,7 @@ object Pair {
   }
 }
 
-object Day18 extends App {
+object Day18 extends common.AoC(18, 2021) {
   var explodePassed = true
   var splitPassed = true
   var magnitudePassed = true
@@ -217,8 +221,7 @@ object Day18 extends App {
   testMagnitude("[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]", 3488L)
   assert(magnitudePassed, "Failed magnitude tests")
 
-  val file = scala.io.Source.fromFile("./data/18.2")
-  val nums = file.getLines().map{case Pair(pair) => pair}.toArray
+  val nums = data.getLines().map{case Pair(pair) => pair}.toArray
   val part1 = nums.reduceLeft{_+_}
   println(s"  Part 1 (Sum): $part1")
   println(s"  Part 1 (Magnitude): ${part1.magnitude()}")

@@ -1,6 +1,6 @@
 package Year2022
 
-object Day20 extends App {
+object Day20 extends common.AoC(20, 2022) {
   def gather(a: Array[Long], map: Map[Int,Int]): Array[Long] = {
     val b = Array.fill(a.length)(0L)
     a.indices.foreach{i => b(map.getOrElse(i, i)) = a(i) }
@@ -70,8 +70,7 @@ object Day20 extends App {
     (1000 to 3000 by 1000).map{i => a((idx0 + i) % a.length) }.sum
   }
 
-  val file = scala.io.Source.fromFile("data/2022/20")
-  val nums = file.getLines().map(_.toLong).toArray
+  val nums = data.getLines().map(_.toLong).toArray
   val start1 = System.currentTimeMillis()
   println(s"Part1: ${coord(mix(nums, n=1))}")
   println(s"Part2: ${coord(mix(nums.map(_ * 811589153L), n=10))}")

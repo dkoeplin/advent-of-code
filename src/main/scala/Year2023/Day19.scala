@@ -1,11 +1,11 @@
 package Year2023
 
-import common.Range
+import common.immutable.Range
 
-object Day19 extends Year2023(19) {
+object Day19 extends common.AoC(19, 2023) {
   case class Part(fields: Map[Char, Range]) {
     def nonEmpty: Boolean = fields.forall(_._2.nonEmpty)
-    def sum: Long = "xmas".map{c => fields(c).start }.sum
+    def sum: Long = "xmas".map{c => fields(c).min }.sum
     def product: Long = "xmas".map{c => fields(c).length }.product
   }
   object Part {

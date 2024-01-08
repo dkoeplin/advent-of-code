@@ -2,7 +2,7 @@ package Year2021
 
 import scala.collection.mutable
 
-object Day23 extends App {
+object Day23 extends common.AoC(23, 2021) {
   val verbose = true
 
   def vprintln(x: => String): Unit = if (verbose) println(x)
@@ -159,8 +159,7 @@ object Day23 extends App {
     }
   }
 
-  val file = io.Source.fromFile("./example/23")
-  val initial: Map[Pos, Amphipod] = file.getLines().zipWithIndex.flatMap { case (line, y) =>
+  val initial: Map[Pos, Amphipod] = data.getLines().zipWithIndex.flatMap { case (line, y) =>
     line.zipWithIndex.filter { case (c, _) => c >= 'A' && c <= 'D' }.map { case (c, x) => Pos(y, x) -> Amphipod(c - 'A') }
   }.toMap
 

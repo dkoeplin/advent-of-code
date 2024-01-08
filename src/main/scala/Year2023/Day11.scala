@@ -1,22 +1,23 @@
 package Year2023
 
-import common.Pos
-import common.immutable.Matrix
+import common.immutable.Pos.Idx
+import common.immutable.{Constructible, Matrix, Pos, Volume}
+import common.implicits.IteratorOps._
+import common.parse
 
-object Day11 extends Year2023(11) {
-  case class Image(iter: Iterator[Iterable[Char]]) extends Matrix[Char](iter) {
-    lazy val galaxies: List[Pos] = posIterator().filter{pos => get(pos).contains('#') }.toList
-    lazy val emptyCols: Set[Int] = (0 until cols).filterNot{j => galaxies.exists(_.col == j) }.toSet
-    lazy val emptyRows: Set[Int] = (0 until rows).filterNot{i => galaxies.exists(_.row == i) }.toSet
-    def dist(x: Pos, y: Pos): (Long, Long) = {
-      val (horz1, horz2) = ((x.col min y.col) until (x.col max y.col)).iterator.partition(emptyCols.contains)
-      val (vert1, vert2) = ((x.row min y.row) until (x.row max y.row)).iterator.partition(emptyRows.contains)
-      (horz1.size + vert1.size, horz2.size + vert2.size)
+object Day11 extends common.AoC(11, 2023) {
+  case class Image(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
+    lazy val galaxies: List[Idx] = indices.filter{pos => get(pos).contains('#') }.toList
+    lazy val emptyCols: Set[Int] = wIterator.filterNot{j => galaxies.exists(_.w == j) }.toSet
+    lazy val emptyRows: Set[Int] = hIterator.filterNot{i => galaxies.exists(_.h == i) }.toSet
+    def dist(x: Idx, y: Idx): Idx = {
+      ((x.w min y.w) until (x.w max y.w)).iterator.total(emptyCols.contains) +
+      ((x.h min y.h) until (x.h max y.h)).iterator.total(emptyRows.contains)
     }
-    val (empty, nonEmpty) = galaxies.combinations(2).map{case List(x, y) => dist(x, y) }
-                                    .reduce{(a,b) => (a._1 + b._1, a._2 + b._2)}
+    val Pos(nonEmpty, empty) = galaxies.combinations(2).collect{case List(x, y) => dist(x, y) }.reduce(_ + _)
   }
-  val img = Image(data.getLines().map(_.toArray))
+  implicit object Image extends Constructible[Char,Image]
+  val img = parse.chars(data).to[Image]
   println(s"Part 1: ${img.empty*2 + img.nonEmpty}")
   println(s"Part 2: ${img.empty*1000000 + img.nonEmpty}")
 }

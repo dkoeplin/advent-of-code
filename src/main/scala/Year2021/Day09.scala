@@ -1,14 +1,12 @@
 package Year2021
 
-import common.Pos
+import common.immutable.Pos
 
 import scala.collection.mutable
 
-object Day09 extends App {
-  val file = scala.io.Source.fromFile("./data/9")
-
+object Day09 extends common.AoC(9, 2021) {
   // Padding because lazy
-  val raw: Array[Array[Char]] = file.getLines().map { row => '9' +: row.toArray :+ '9' }.toArray
+  val raw: Array[Array[Char]] = data.getLines().map { row => '9' +: row.toArray :+ '9' }.toArray
   val cols = raw(0).length
   val padding = Array.fill[Char](cols)('9')
   val map: Array[Array[Char]] = padding +: raw :+ padding
@@ -33,7 +31,7 @@ object Day09 extends App {
   def part2(): Unit = {
     val basins = Seq.tabulate(rows) { _ => mutable.Seq.fill(cols)(-1) }
     var iter: Int = -1
-    val sizes: mutable.Map[Int, Seq[Pos]] = mutable.Map.empty
+    val sizes: mutable.Map[Int, Seq[Pos[Int]]] = mutable.Map.empty
     (0 until rows - 1).foreach { i =>
       (0 until cols - 1).foreach { j =>
         if (map(i)(j) < '9') {
@@ -43,7 +41,7 @@ object Day09 extends App {
           val label = if (up != -1 && left != -1 && up != left) {
             val removed = Math.max(up, left)
             val intersect = Math.min(up, left)
-            sizes(removed).foreach { pos => basins(pos.row)(pos.col) = intersect }
+            sizes(removed).foreach { pos => basins(pos.h)(pos.w) = intersect }
             sizes(intersect) ++= sizes(removed)
             sizes(removed) = Nil
             intersect

@@ -61,10 +61,9 @@ object NestedList {
   }
 }
 
-object Day13 extends App {
+object Day13 extends common.AoC(13, 2022) {
   val filename = "data/2022/13"
-  val file = scala.io.Source.fromFile(filename)
-  val lists: Array[NestedList] = file.getLines().zipWithIndex.filter(_._1.nonEmpty).map{case (line,no) =>
+  val lists: Array[NestedList] = data.getLines().zipWithIndex.filter(_._1.nonEmpty).map{case (line,no) =>
     NestedList.parse(filename, no, line)
   }.toArray
   val part1 = lists.grouped(2).zipWithIndex.filter{case (pair, _) => pair(0) <= pair(1) }.map(_._2 + 1).sum

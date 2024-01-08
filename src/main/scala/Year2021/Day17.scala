@@ -1,6 +1,5 @@
 package Year2021
 
-
 object Target {
   private val Number = "\\-?[0-9]+"
   private val TargetPattern = s"target area: x=($Number)\\.\\.($Number), y=($Number)\\.\\.($Number)".r
@@ -10,13 +9,12 @@ object Target {
   }
 }
 
-object Day17 extends App {
-  val file = scala.io.Source.fromFile("./data/17")
+object Day17 extends common.AoC(17, 2021) {
   //   T
   // V/ \
   // 0   |
   //     F
-  file.getLines().foreach{case line @ Target(xMin, xMax, yMin, yMax) =>
+  data.getLines().foreach{case line @ Target(xMin, xMax, yMin, yMax) =>
     // xMin <= sum(0 .. Vx) <= xMax
 
     // Max height is sum(0 .. initial Y velocity) = Y*(Y+1)/2

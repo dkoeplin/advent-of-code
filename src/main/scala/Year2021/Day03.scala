@@ -1,6 +1,5 @@
 package Year2021
 
-
 case class BitCount(ones: Array[Int] = Array.empty, total: Int = 0) {
   def +(str: String): BitCount = {
     val rhs = BitCount(str)
@@ -16,13 +15,11 @@ object BitCount {
   def apply(str: String) = new BitCount(str.trim().map{c => if (c == '1') 1 else 0}.toArray)
 }
 
-object Day03 extends App {
-  val file = scala.io.Source.fromFile("./data/3")
-  val lines = file.getLines().toArray
+object Day03 extends common.AoC(3, 2021) {
+  val lines = data.getLines().toArray
   val counts = lines.foldLeft(BitCount()){(gamma, line) => gamma + line }
   val gamma = counts.toGamma
   val alpha = counts.toAlpha
-  file.close()
 
   println(s"Part 1 (Gamma): ${counts.bits()}: $gamma")
   println(s"Part 1 (Alpha): ${counts.flippedBits()}: $alpha")

@@ -22,10 +22,9 @@ object Brackets {
   val part2Scores: Array[Int] = Array[Int](1, 2, 3, 4)
 }
 
-object Day10 extends App {
+object Day10 extends common.AoC(10, 2021) {
   val Open = "([(\\[{<])".r
   val Close = "([)\\]}>])".r
-  val file = scala.io.Source.fromFile("./data/10")
 
   def error(code: String, line: Int, col: Int, message: String): Unit = {
     Console.err.println(s"${line+1}:${col+1}: $message")
@@ -33,7 +32,7 @@ object Day10 extends App {
     Console.err.println(" " * col + "^")
   }
 
-  val (part1, part2) = file.getLines().zipWithIndex.foldLeft((0, List.empty[Long])){case (accum, (code, line)) =>
+  val (part1, part2) = data.getLines().zipWithIndex.foldLeft((0, List.empty[Long])){case (accum, (code, line)) =>
     val brackets = Brackets()
     val unmatched = code.zipWithIndex.find{
       case (Open(c), col) => brackets.open(c, col)

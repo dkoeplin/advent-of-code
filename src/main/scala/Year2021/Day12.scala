@@ -2,10 +2,9 @@ package Year2021
 
 import scala.collection.mutable
 
-object Day12 extends App {
+object Day12 extends common.AoC(12, 2021) {
   val NodePattern = "([a-zA-Z]+)-([a-zA-Z]+)".r
-  val file = scala.io.Source.fromFile("./data/12")
-  val edges = file.getLines().map { case NodePattern(a, b) => (a, b) }.toArray
+  val edges = data.getLines().map { case NodePattern(a, b) => (a, b) }.toArray
   val nodes: Array[String] = edges.flatMap { case (a, b) => Seq(a, b) }.distinct
   val small: Set[Int] = nodes.iterator.zipWithIndex.filter(_._1.head.isLower).map(_._2).toSet
   val names: Map[String, Int] = nodes.zipWithIndex.toMap
