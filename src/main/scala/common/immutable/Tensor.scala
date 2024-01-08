@@ -5,7 +5,7 @@ import common.immutable.Pos.Idx
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
-abstract class TensorLike[T](volume: Volume[Int], data: IterableOnce[T]) {
+abstract class TensorLike[A](volume: Volume[Int], data: IterableOnce[A]) {
   def vol: Volume[Int] = volume
 
   def rank: Int = volume.rank
@@ -14,14 +14,14 @@ abstract class TensorLike[T](volume: Volume[Int], data: IterableOnce[T]) {
 
   def has(pos: Idx): Boolean = pos isIn volume
 
-  def iterator: Iterator[T] = data.iterator
+  def iterator: Iterator[A] = data.iterator
 
   def indices: Iterator[Idx] = volume.iterator
   def reverseIndices: Iterator[Idx] = volume.reverseIterator
 
-  def sum(implicit num: Numeric[T]): T = iterator.reduce(num.plus)
+  def sum(implicit num: Numeric[A]): A = iterator.reduce(num.plus)
 
-  def indexWhere(cond: T => Boolean): Option[Idx] = iterator.zip(indices).find{case (d,_) => cond(d) }.map(_._2)
+  def indexWhere(cond: A => Boolean): Option[Idx] = iterator.zip(indices).find{case (d,_) => cond(d) }.map(_._2)
 }
 
 case class TensorView[A](volume: Volume[Int], data: Iterator[A]) extends TensorLike[A](volume, data) {
