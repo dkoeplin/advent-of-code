@@ -1,7 +1,7 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructible, Matrix, Volume}
+import common.immutable.{Constructable, Matrix, Volume}
 import common.parse
 
 object Day16 extends common.AoC(16, 2023) {
@@ -24,7 +24,7 @@ object Day16 extends common.AoC(16, 2023) {
   case class State(beams: Set[Beam], visited: Set[Beam]) {
     def this(beam: Beam) = this(Set(beam), Set.empty)
   }
-  case class Contraption(volume: Volume[Int], data: Array[Char]) extends Matrix(volume, data) {
+  case class Contraption(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
     def move(beam: Beam): Iterator[Beam]
       = get(beam.pos).iterator.flatMap{c => splitOrReflect(c, beam.dir) }
                               .map{d => Beam(beam.pos + d, d) }
@@ -48,7 +48,7 @@ object Day16 extends common.AoC(16, 2023) {
 
     def best: Int = edges.map{start => energized(start).size }.max
   }
-  implicit object Contraption extends Constructible[Char,Contraption]
+  implicit object Contraption extends Constructable[Char,Contraption]
 
   val contraption = parse.chars(data).to[Contraption]
   println(s"Part 1: ${contraption.energized(Beam(Idx(0,0), Idx.D2.R)).size}")

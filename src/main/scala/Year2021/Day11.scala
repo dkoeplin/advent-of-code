@@ -1,12 +1,12 @@
 package Year2021
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructible, Volume}
+import common.immutable.{Constructable, Volume}
 import common.mutable.Matrix
 import common.parse
 
 object Day11 extends common.AoC(11, 2021) {
-  case class Grid(volume: Volume[Int], data: Array[Int]) extends Matrix[Int](volume, data) {
+  case class Grid(vol: Volume[Int], data: Array[Int]) extends Matrix[Int](vol, data) {
     var flashes: Int = 0
 
     def increment(i: Idx): Boolean = {
@@ -27,9 +27,9 @@ object Day11 extends common.AoC(11, 2021) {
       indices.foreach{i => update(i, get(i).filter(_ >= 10).map(_ => 0)) }
     }
   }
-  implicit object Grid extends Constructible[Int,Grid]
+  implicit object Grid extends Constructable[Int,Grid]
 
-  val grid = parse.ints(data).to[Grid]
+  val grid = parse.digits(data).to[Grid]
 
   (1 to 100).foreach{_ => grid.step() }
   println(s"Part 1: Flashes: ${grid.flashes}")

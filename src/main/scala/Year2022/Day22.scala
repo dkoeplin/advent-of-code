@@ -36,7 +36,7 @@ object Day22 extends common.AoC(22, 2022) {
   val map = lines.dropRight(2)
   val rows = map.length
   val cols = map.map(_.length).max
-  val board = Matrix.empty[Char](rows, cols, ' ')
+  val board = Matrix.fill[Char](Idx(rows, cols), ' ')
   val rowBounds = Array.fill(board.H)(Bounds(min = board.W, max = 0))
   val colBounds = Array.fill(board.W)(Bounds(min = board.H, max = 0))
   map.zipWithIndex.foreach{case (line, i) => line.zipWithIndex.foreach{case (c, j) =>

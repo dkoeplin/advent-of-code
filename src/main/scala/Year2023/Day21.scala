@@ -1,11 +1,11 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructible, Matrix, Volume}
+import common.immutable.{Constructable, Matrix, Volume}
 import common.{math, parse}
 
 object Day21 extends common.AoC(21, 2023) {
-  case class GardenMap(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
+  case class GardenMap(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
     lazy val start: Idx = indices.find{p => apply(p) == 'S' }.get
     def next(p: Idx): Iterator[Idx]
       = Idx.D2.nondiag.iterator.map(_ + p).filter { p => get(p).exists { c => c == '.' || c == 'S' } }
@@ -56,7 +56,7 @@ object Day21 extends common.AoC(21, 2023) {
       println(s"Prev2: 639126042932833 (?)")
     }
   }
-  implicit object GardenMap extends Constructible[Char,GardenMap]
+  implicit object GardenMap extends Constructable[Char,GardenMap]
 
 
 

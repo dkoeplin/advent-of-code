@@ -1,7 +1,7 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructible, Matrix, Volume}
+import common.immutable.{Constructable, Matrix, Volume}
 import common.math.{Even, Odd}
 import common.parse
 
@@ -25,7 +25,7 @@ object Day10 extends common.AoC(10, 2023) {
       outside = outside ++ (if (isInside) Set.empty else nodes))
   }
 
-  case class Diagram(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
+  case class Diagram(vol: Volume[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
     val start: Idx = indexWhere(_ == 'S').get
     private val types: Map[Char, Seq[Idx]] = {
       val next = Idx.D2.nondiag.filter{d => pipeNeighbors(d + start, pipes).contains(start) }.toSeq
@@ -60,7 +60,7 @@ object Day10 extends common.AoC(10, 2023) {
     // Returns an expanded diagram twice the current size, making sure to keep pipes connected.
     // Keeps only the pipes that belong to the starting cycle.
     // This exposes "paths" between pipes to more easily detect whether a tile is truly inside the cycle.
-    def expand(): Diagram = Diagram(volume * 2 , indices.map{idx =>
+    def expand(): Diagram = Diagram(vol * 2 , indices.map{idx =>
         val original = idx / 2
         val inCycle = cycle.contains(original)
         lazy val horz = inCycle && types(apply(original)).contains(Idx.D2.R)
@@ -91,7 +91,7 @@ object Day10 extends common.AoC(10, 2023) {
 
     lazy val part2: Int = expand().classifyTiles().inside.count{case Idx(Even(),Even()) => true; case _ => false}
   }
-  implicit object Diagram extends Constructible[Char,Diagram]
+  implicit object Diagram extends Constructable[Char,Diagram]
 
   val diagram = parse.chars(data).to[Diagram]
   println(s"Part 1: ${diagram.part1}")

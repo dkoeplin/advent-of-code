@@ -5,7 +5,7 @@ import common.immutable.Pos.Idx
 import common.parse
 
 object Day08 extends common.AoC(8, 2022) {
-  val matrix = parse.ints(data).to[Matrix]
+  val matrix = parse.digits(data).to[Matrix]
   def scan(i: Int, dir: Idx): Set[Idx] = {
     var max: Int = -1
     var set: Set[Idx] = Set.empty

@@ -1,8 +1,12 @@
 package common
 
+import common.viz.Visualizer
+
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
+import scala.collection.mutable.ArrayBuffer
 import scala.io.BufferedSource
+import scala.swing.{Frame, Graphics2D, MainFrame, Panel}
 
 class AoC(day: Int, year: Int) extends App {
   private val dayStr = day.toString
@@ -26,4 +30,19 @@ class AoC(day: Int, year: Int) extends App {
   def write(filename: String, str: String): Unit = {
     Files.write(Paths.get(filename), str.getBytes(StandardCharsets.UTF_8))
   }
+
+  val visualizers: ArrayBuffer[Visualizer] = ArrayBuffer.empty
+
+  case class Visualizations(frame: Frame, vs: ArrayBuffer[Visualizer]) extends Panel {
+    override def paint(g: Graphics2D): Unit = vs.foreach(_.apply(frame, g))
+  }
+
+  lazy val viz: Frame = new MainFrame {
+    title = s"AoC Day $day Year $year"
+    //  background =
+    resizable = true
+    contents = Visualizations(this, visualizers)
+    maximize()
+  }
+  def show(): Unit = { viz.visible = true }
 }

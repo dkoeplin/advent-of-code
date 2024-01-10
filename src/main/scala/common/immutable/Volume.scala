@@ -27,7 +27,11 @@ class Volume[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) {
   def !=(rhs: Volume[T]): Boolean = !(this == rhs)
   override def hashCode(): Int = (min, max).hashCode()
 
-  def *(rhs: T): Volume[T] = Volume(min, max * rhs)
+  def +(rhs: Pos[T]): Volume[T] = Volume(min + rhs, max + rhs)
+  def -(rhs: Pos[T]): Volume[T] = Volume(min - rhs, max - rhs)
+
+  def *(rhs: T): Volume[T] = Volume(min, max * rhs) // TODO: Both?
+  def *(rhs: Pos[T]): Volume[T] = Volume(min * rhs, max * rhs)
 
   def overlaps(rhs: Volume[T]): Boolean
     = zipped(min.iterator, max.iterator, rhs.min.iterator, rhs.max.iterator)
@@ -100,6 +104,9 @@ class Volume[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) {
 
   def diff(rhs: Iterable[Volume[T]]): Set[Volume[T]] = rhs.foldLeft(Set(this)){(set,v) => set.flatMap(_ diff v) }
 
+  def toDoubles: Volume[Double] = Volume(min.toDoubles, max.toDoubles)
+  def toInts: Volume[Int] = Volume(min.toInts, max.toInts)
+
   override def toString: String = s"($min to $max)"
 }
 
@@ -122,5 +129,15 @@ object Volume {
 
   def get[T](min: Pos[T], max: Pos[T])(implicit num: Numeric[T]): Option[Volume[T]] = {
     if (min.iterator.zip(max.iterator).forall{case (a, b) => a <= b }) Some(Volume(min, max)) else None
+  }
+
+  implicit class IntegralVolume[T](a: Volume[T])(implicit int: Integral[T]) {
+    def /(b: T): Volume[T] = Volume(a.min / b, a.max / b)
+    def /(b: Pos[T]): Volume[T] = Volume(a.min / b, a.max / b)
+  }
+  implicit class FractionalVolume[T](a: Volume[T])(implicit f: Fractional[T]) {
+    def /(b: T): Volume[T] = Volume(a.min / b, a.max / b)
+    def /(b: Pos[T]): Volume[T] = Volume(a.min / b, a.max / b)
+    def roundInt: Volume[Int] = Volume(a.min.roundInt, a.max.roundInt)
   }
 }

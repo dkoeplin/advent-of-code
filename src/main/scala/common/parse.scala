@@ -15,6 +15,6 @@ object parse {
   def chars(file: scala.io.BufferedSource): TensorView[Char] = parse(file)(identity)
   def chars(lines: IterableOnce[String]): TensorView[Char] = parse(lines)(identity)
 
-  def ints(file: scala.io.BufferedSource): TensorView[Int] = parse(file)(_.asDigit)
-  def ints(lines: IterableOnce[String]): TensorView[Int] = parse(lines)(_.asDigit)
+  def digits(file: scala.io.BufferedSource): TensorView[Int] = parse(file)(_.asDigit)
+  def digits(lines: IterableOnce[String]): TensorView[Int] = parse(lines)(_.asDigit)
 }

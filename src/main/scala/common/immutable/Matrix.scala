@@ -2,18 +2,18 @@ package common.immutable
 
 import common.immutable.Pos.Idx
 
-class Matrix[A](volume: Volume[Int], data: Array[A]) extends Tensor[A](volume, data) {
-  def wIterator: Iterator[Int] = volume.cols.iterator.map(_.x)
-  def hIterator: Iterator[Int] = volume.rows.iterator.map(_.x)
+class Matrix[A](vol: Volume[Int], data: Array[A]) extends Tensor[A](vol, data) {
+  def wIterator: Iterator[Int] = vol.cols.iterator.map(_.x)
+  def hIterator: Iterator[Int] = vol.rows.iterator.map(_.x)
 
   def rows: Iterator[Iterator[A]] = hIterator.map{i => row(i) }
   def cols: Iterator[Iterator[A]] = wIterator.map{j => col(j) }
 
-  def row(i: Int): Iterator[A] = volume.alter(rank - 2, i, i).iterator.map(apply)
-  def col(j: Int): Iterator[A] = volume.alter(rank - 1, j, j).iterator.map(apply)
+  def row(i: Int): Iterator[A] = vol.alter(rank - 2, i, i).iterator.map(apply)
+  def col(j: Int): Iterator[A] = vol.alter(rank - 1, j, j).iterator.map(apply)
 
   /// Create a new (printable) Matrix using the function func on every position in this matrix.
-  def printable(func: A => Char): Matrix[Char] = new Matrix[Char](volume, iterator.map(func).toArray)
+  def printable(func: A => Char): Matrix[Char] = new Matrix[Char](vol, iterator.map(func).toArray)
 
   /// Create a new annotated, printable Matrix using the function func on every position in this matrix.
   /// Adds row and column label numbers for help with debugging.
@@ -37,10 +37,8 @@ class Matrix[A](volume: Volume[Int], data: Array[A]) extends Tensor[A](volume, d
 
   override def toString: String = data.grouped(W).map{_.map(Matrix.digit).mkString("")}.mkString("\n")
 }
-
-object Matrix extends StaticTensorOps[Matrix] {
-  override def apply[A](volume: Volume[Int], data: Array[A]): Matrix[A] = new Matrix(volume, data)
-  implicit def matrixIsConstructible[A]: Constructible[A,Matrix[A]] = Matrix.apply
+object Matrix extends StaticTensorMethods[Matrix] {
+  def apply[A](volume: Volume[Int], data: Array[A]): Matrix[A] = new Matrix(volume, data)
 
   def digit[T](x: T): String = x match {
     case x: Int => val str = Integer.toHexString(x); if (str.length > 1) "N" else str

@@ -1,12 +1,12 @@
 package Year2023
 
 import common.immutable.Pos._
-import common.immutable.{Constructible, Matrix, Volume}
+import common.immutable.{Constructable, Matrix, Volume}
 import common.implicits.IteratorOps._
 import common.parse
 
 object Day14 extends common.AoC(14, 2023) {
-  case class Platform(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
+  case class Platform(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
     private def slide(empty: Int, rocks: Int, reverse: Boolean): String
       = if (empty + rocks == 0) "#" else if (!reverse) "." * empty + "O" * rocks else "O" * rocks + "." * empty
 
@@ -17,7 +17,7 @@ object Day14 extends common.AoC(14, 2023) {
     def tilt(delta: Idx): Platform = {
       val reverse = delta.w < 0 || delta.h < 0
       val vectors = if (delta.h != 0) cols else rows
-      val tilted = Platform(volume, vectors.flatMap{vec => slide(vec, reverse) }.toArray)
+      val tilted = Platform(vol, vectors.flatMap{vec => slide(vec, reverse) }.toArray)
       if (delta.h != 0) tilted.t.to[Platform] else tilted
     }
 
@@ -50,7 +50,7 @@ object Day14 extends common.AoC(14, 2023) {
     lazy val load: Int = rocks.iterator.map{pos => H - pos.h}.sum
     private var cycle: Option[Cycle] = None
   }
-  implicit object Platform extends Constructible[Char,Platform]
+  implicit object Platform extends Constructable[Char,Platform]
 
   val platform = parse.chars(data).to[Platform]
   println(s"Part 1: ${platform.tilt(Idx.D2.U).load}")

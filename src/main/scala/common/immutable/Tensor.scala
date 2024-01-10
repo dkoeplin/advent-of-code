@@ -5,86 +5,90 @@ import common.immutable.Pos.Idx
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
-abstract class TensorLike[A](volume: Volume[Int], data: IterableOnce[A]) {
-  def vol: Volume[Int] = volume
-
-  def rank: Int = volume.rank
-  def H: Int = volume.shape.getOrElse(rank - 2, 1)
-  def W: Int = volume.shape.getOrElse(rank - 1, 1)
-
-  def has(pos: Idx): Boolean = pos isIn volume
-
-  def iterator: Iterator[A] = data.iterator
-
-  def indices: Iterator[Idx] = volume.iterator
-  def reverseIndices: Iterator[Idx] = volume.reverseIterator
-
-  def sum(implicit num: Numeric[A]): A = iterator.reduce(num.plus)
-
-  def indexWhere(cond: A => Boolean): Option[Idx] = iterator.zip(indices).find{case (d,_) => cond(d) }.map(_._2)
-}
-
-case class TensorView[A](volume: Volume[Int], data: Iterator[A]) extends TensorLike[A](volume, data) {
-  def to[T](implicit a: ClassTag[A], c: Constructible[A,T]): T = c(volume, data.toArray)
-  def to[T[B]<:Tensor[B]](implicit a: ClassTag[A], c: Constructible[A,T[A]]): T[A] = c(volume, data.toArray)
-}
-object TensorView {
-  implicit def make[A:ClassTag,T](view: TensorView[A])(implicit c: Constructible[A,T]): T = view.to[T]
-}
-
-class Tensor[A](volume: Volume[Int], data: Array[A]) extends TensorLike[A](volume, data) {
-  protected def array: Array[A] = data
-  protected def flatten(i: Idx): Int = ((i - volume.min) * strides).sum
-
-  def rawData: Array[A] = data
-
-  def shape: Pos[Int] = volume.shape
-  def strides: Pos[Int] = volume.shape.strides
-
-  def get(pos: Idx): Option[A] = if (has(pos)) Some(apply(pos)) else None
-  def getOrElse(inds: Int*)(default: => A): A = get(Pos(inds)).getOrElse(default)
-  def getOrElse(pos: Idx, default: => A): A = get(pos).getOrElse(default)
-  def apply(inds: Int*): A = apply(Pos(inds))
-  def apply(i: Idx): A = data(flatten(i))
-
-  def reverseIterator: Iterator[A] = data.reverseIterator
-  def lastIndexWhere(cond: A => Boolean): Option[Idx]
-    = reverseIterator.zip(reverseIndices).find{case (x,_) => cond(x) }.map(_._2)
-
-  def t: TensorView[A] = new TensorView[A](volume.t, volume.t.iterator.map(_.t).map(apply))
-}
-
-trait Constructible[A,T] {
+trait Constructable[A,T] {
   def apply(volume: Volume[Int], data: Array[A]): T
 }
 
-class TensorLikeOps[A,T<:TensorLike[A]](tensor: T) {
-  def zip[R](rhs: T)(func: (A, A) => R): TensorView[R]
-  = new TensorView(tensor.vol, tensor.iterator.zip(rhs.iterator).map{case (a, b) => func(a, b) })
-  def map[R](func: A => R): TensorView[R] = new TensorView[R](tensor.vol, tensor.iterator.map(func))
-  def mapIndices[R](func: Idx => R): TensorView[R] = new TensorView[R](tensor.vol, tensor.indices.map(func))
+class TensorView[A](vol: Volume[Int], data: IterableOnce[A]) {
+  def shape: Pos[Int] = vol.shape
+  def strides: Pos[Int] = vol.shape.strides
 
-  def +(rhs: T)(implicit num: Numeric[A]): TensorView[A] = zip(rhs)(num.plus)
-  def -(rhs: T)(implicit num: Numeric[A]): TensorView[A] = zip(rhs)(num.minus)
-  def *(rhs: T)(implicit num: Numeric[A]): TensorView[A] = zip(rhs)(num.times)
+  def volume: Volume[Int] = vol
+  def iterator: Iterator[A] = data.iterator
+
+  def rank: Int = vol.rank
+  def H: Int = vol.shape.getOrElse(rank - 2, 1)
+  def W: Int = vol.shape.getOrElse(rank - 1, 1)
+
+  def has(pos: Idx): Boolean = pos isIn vol
+
+  def sum(implicit num: Numeric[A]): A = iterator.sum
+
+  def indices: Iterator[Idx] = vol.iterator
+  def reverseIndices: Iterator[Idx] = vol.reverseIterator
+
+  def indexWhere(cond: A => Boolean): Option[Idx] = iterator.zip(indices).find{case (d,_) => cond(d) }.map(_._2)
+
+  def zip[B,R,C<:TensorView[B]](rhs: C)(func: (A, B) => R): TensorView[R]
+  = new TensorView(vol, iterator.zip(rhs.iterator).map{case (a, b) => func(a, b) })
+  def map[R](func: A => R): TensorView[R] = new TensorView[R](vol, iterator.map(func))
+  def mapIndices[R](func: Idx => R): TensorView[R] = new TensorView[R](vol, indices.map(func))
+
+  def +(rhs: TensorView[A])(implicit num: Numeric[A]): TensorView[A] = zip[A,A,TensorView[A]](rhs)(num.plus)
+  def -(rhs: TensorView[A])(implicit num: Numeric[A]): TensorView[A] = zip[A,A,TensorView[A]](rhs)(num.minus)
+  def *(rhs: TensorView[A])(implicit num: Numeric[A]): TensorView[A] = zip[A,A,TensorView[A]](rhs)(num.times)
+
+  def to[T[X]<:TensorView[X]](implicit a: ClassTag[A], c: Constructable[A,T[A]]): T[A] = c(vol, iterator.toArray(a))
+  def to[T](implicit a: ClassTag[A], c: Constructable[A,T]): T = c(vol, iterator.toArray(a))
+}
+object TensorView {
+  implicit def make[A:ClassTag,T](view: TensorView[A])(implicit c: Constructable[A,T]): T = view.to[T]
 }
 
-trait StaticTensorOps[T[X]<:Tensor[X]] {
-  def apply[A](volume: Volume[Int], data: Array[A]): T[A]
-  def apply[A](shape: Idx, data: Array[A]): T[A]
-    = apply(Volume(Pos.zero[Int](shape.rank), shape - 1), data) // min and max are inclusive in volume
+class Tensor[A](vol: Volume[Int], data: Array[A]) extends TensorView[A](vol, data) {
+  protected def flatten(i: Idx): Int = ((i - vol.min) * strides).sum
 
+  def raw: Array[A] = data
+
+  def apply(i: Idx): A = data(flatten(i))
+  def get(pos: Idx): Option[A] = if (has(pos)) Some(apply(pos)) else None
+  def getOrElse(indices: Int*)(default: => A): A = get(Pos(indices)).getOrElse(default)
+  def getOrElse(pos: Idx, default: => A): A = get(pos).getOrElse(default)
+  //  def apply(indices: Int*): A = apply(Pos(indices))
+
+  def reverseIterator: Iterator[A] = data.reverseIterator
+  def lastIndexWhere(cond: A => Boolean): Option[Idx]
+  = reverseIterator.zip(reverseIndices).find{case (x,_) => cond(x) }.map(_._2)
+
+  def t: TensorView[A] = new TensorView[A](vol.t, vol.t.iterator.map(_.t).map(apply))
+}
+
+trait StaticTensorMethods[T[X]<:Tensor[X]] {
+  def apply[A](volume: Volume[Int], data: Array[A]): T[A]
+  def apply[A](shape: Idx, data: Array[A]): T[A] = apply(Volume(Pos.zero[Int](shape.rank), shape - 1), data)
   def apply[A:ClassTag](iter: Iterator[Iterable[A]]): T[A] = {
     val data = iter.toArray
     val rows = data.length
     val cols = data.headOption.map(_.size).getOrElse(0)
-    apply(Volume(Pos.zero[Int](2), Idx(rows, cols)), data.flatten)
+    apply(shape = Idx(rows, cols), data.flatten)
   }
 
-  def apply(file: scala.io.BufferedSource): T[Char]
-    = apply(file.getLines().map(_.toArray) : Iterator[Iterable[Char]])
+  def fill[A:ClassTag](shape: Idx, value: A): T[A] = apply(shape, Array.fill(shape.product)(value))
+
+  private class StaticConstructor[A](x: StaticTensorMethods[T]) extends Constructable[A,T[A]] {
+    def apply(vol: Volume[Int], data: Array[A]): T[A] = x(vol, data)
+  }
+  implicit def constructable[A]: Constructable[A,T[A]] = new StaticConstructor[A](this)
 }
-object Tensor extends StaticTensorOps[Tensor] {
+
+object Tensor extends StaticTensorMethods[Tensor] {
   def apply[A](volume: Volume[Int], data: Array[A]): Tensor[A] = new Tensor(volume, data)
-  implicit def tensorIsConstructible[A]: Constructible[A, Tensor[A]] = Tensor.apply
+
+  // move me
+  implicit class Tuple3Ops(x: (scala.Range, scala.Range, scala.Range)) {
+    def apply[A:ClassTag](func: (Int, Int, Int) => A): TensorView[A] = {
+      val volume = Volume(Pos(x._1.min, x._2.min, x._3.min), Pos(x._1.max, x._2.max, x._3.max))
+      new TensorView(volume, volume.iterator.map { case Pos(x, y, z) => func(x, y, z) })
+    }
+  }
 }

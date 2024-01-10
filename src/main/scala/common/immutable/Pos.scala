@@ -3,6 +3,8 @@ package common.immutable
 import common.implicits.BooleanOps.BooleanOps
 import common.implicits.IteratorOps.zipped
 
+import scala.language.implicitConversions
+
 class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
   import num._
 
@@ -29,7 +31,6 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
   def +(rhs: T): Pos[T] = Pos(iterator.map{x => x + rhs})
   def -(rhs: T): Pos[T] = Pos(iterator.map{x => x - rhs})
   def *(rhs: T): Pos[T] = Pos(iterator.map{x => x * rhs})
-  def /(rhs: T)(implicit f: Integral[T]): Pos[T] = Pos(iterator.map{x => f.quot(x, rhs) })
 
   def +(rhs: Pos[T]): Pos[T] = Pos(iterator.zip(rhs.iterator).map{case (a,b) => a + b })
   def -(rhs: Pos[T]): Pos[T] = Pos(iterator.zip(rhs.iterator).map{case (a,b) => a - b })
@@ -86,6 +87,9 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
   }
 
   def t: Pos[T] = Pos(iterator.take(rank - 2) ++ Iterator(w, h))
+
+  def toDoubles: Pos[Double] = Pos(inds.map(num.toDouble))
+  def toInts: Pos[Int] = Pos(inds.map(num.toInt))
 
   override def toString: String = inds.mkString("(", ", ", ")")
 
@@ -160,5 +164,19 @@ object Pos {
 
   // Pos isn't quite numeric - it doesn't have a strict ordering
   // implicit class NumericIdx(x: Idx) extends Numeric[Idx]
+
+  implicit class IntegralPos[T](a: Pos[T])(implicit int: Integral[T]) {
+    import int._
+    def /(b: T): Pos[T] = Pos(a.iterator.map{x => x / b })
+    def /(b: Pos[T]): Pos[T] = Pos(a.iterator.zip(b.iterator).map{case (a,b) => a / b })
+  }
+  implicit class FractionalPos[T](a: Pos[T])(implicit f: Fractional[T]) {
+    import f._
+    def /(b: T): Pos[T] = Pos(a.iterator.map{x => x / b })
+    def /(b: Pos[T]): Pos[T] = Pos(a.iterator.zip(b.iterator).map{case (a,b) => a / b })
+    def roundInt: Pos[Int] = Pos(a.iterator.map(f.toDouble).map(Math.round).map(_.toInt))
+  }
+
+  implicit def fromSwingPoint(pt: scala.swing.Point): Pos[Int] = Pos(pt.x, pt.y)
 }
 

@@ -7,8 +7,8 @@ import common.parse
 
 object Day12 extends common.AoC(12, 2022) {
   val matrix: Matrix[Char] = parse.chars(data).to[Matrix]
-  val start = matrix.indexWhere{pos => matrix(pos) == 'S' }.get
-  val end = matrix.indexWhere{pos => matrix(pos) == 'E' }.get
+  val start = matrix.indices.find{pos => matrix(pos) == 'S' }.get
+  val end = matrix.indices.find{pos => matrix(pos) == 'E' }.get
   matrix(start) = 'a'
   matrix(end) = 'z'
 

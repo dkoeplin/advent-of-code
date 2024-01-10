@@ -2,15 +2,15 @@ package Year2023
 
 import common.algorithm.LongestPath
 import common.immutable.Pos.Idx
-import common.immutable.{Constructible, Matrix, Volume}
+import common.immutable.{Constructable, Matrix, Volume}
 import common.parse
 
 import scala.collection.immutable.VectorMap
 
 object Day23 extends common.AoC(23, 2023) {
-  case class Trails(volume: Volume[Int], data: Array[Char]) extends Matrix[Char](volume, data) {
-    val start: Idx = indexWhere{p => apply(p) != '#' }.get
-    val end: Idx = lastIndexWhere{p => apply(p) != '#' }.get
+  case class Trails(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
+    val start: Idx = indices.find{p => apply(p) != '#' }.get
+    val end: Idx = indices.find{p => apply(p) != '#' }.get
     type VectorSet = VectorMap[Idx, Boolean]
     object VectorSet {
       def apply(x: Idx): VectorSet = VectorMap[Idx,Boolean](x -> true)
@@ -19,7 +19,7 @@ object Day23 extends common.AoC(23, 2023) {
       paths.flatMap{path => next(paths.) }
     }*/
   }
-  implicit object Trails extends Constructible[Char,Trails]
+  implicit object Trails extends Constructable[Char,Trails]
 
   class Part1(trails: Trails) extends LongestPath(trails.start, trails.end) {
     protected def delta(c: Char): Iterator[Idx] = c match {
