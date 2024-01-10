@@ -7,8 +7,7 @@ import scala.swing.{Color, Frame, MainFrame}
 object Exp extends scala.swing.SimpleSwingApplication {
   private def fps(n: Int): Int = 1000 / n
 
-  var pixelsPerMeter: Double = 100
-
+  val pixelsPerMeter: Double = 100
   val tickRate: Int = 10       // ms / tick
   val frameRate: Int = fps(40) // ms / redraw
   val gravity: Double = pixelsPerMeter * 9.8 * 1e-6 * tickRate*tickRate // 9.8 m/s^2 * (1/1000)^2 s^2/ms^2 * (ms / tick)^2
