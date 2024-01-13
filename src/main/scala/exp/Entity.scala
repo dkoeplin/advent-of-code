@@ -66,7 +66,7 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
           bound - v
         case _ if World.isVertical(dim) && falls =>
           Math.min(Exp.terminalVelocity, v + Exp.gravity)
-        case _ => v // Open space in this direction
+        case _ => v
       }
     } else 0
   })
