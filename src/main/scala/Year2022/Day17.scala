@@ -10,7 +10,7 @@ object Day17 extends common.AoC(17, 2022) {
       Some(Rock(pos + delta, kind)).filter(_.valid(grid))
     }
     def valid(grid: SparseMatrix[Char]): Boolean = pixels().forall{pos =>
-      pos.w >= 0 && pos.w <= 6 && grid(pos) == '.'
+      pos.c >= 0 && pos.c <= 6 && grid(pos) == '.'
     }
   }
   object Rock extends Enumeration {
@@ -41,7 +41,7 @@ object Day17 extends common.AoC(17, 2022) {
   def simulate(rock: Int, jet: Int, grid: SparseMatrix[Char]): Int = {
     var jetIndex = jet
     val kind = rock % Rock.kinds
-    val minY = grid.min.h - 3 - Rock.height(kind)
+    val minY = grid.min.r - 3 - Rock.height(kind)
     var prev: Option[Rock] = None
     var next: Option[Rock] = Some(Rock(Idx(minY, 2), kind))
     while (next.nonEmpty) {
@@ -64,7 +64,7 @@ object Day17 extends common.AoC(17, 2022) {
     (0 until 2022).foreach {rock =>
       jet = simulate(rock % Rock.kinds, jet, grid)
     }
-    -grid.min.h
+    -grid.min.r
   }
   println(s"Part1: ${part1()}")
 
@@ -74,9 +74,9 @@ object Day17 extends common.AoC(17, 2022) {
     val grid = new SparseMatrix[Char]('.')
     (0 to 6).foreach { j => grid(Idx(0, j)) = '-' }
     def surface(): Seq[Long] = {
-      val minY = grid.min.h
+      val minY = grid.min.r
       (0 to 6).map{j =>
-        grid.keys.filter(_.w == j).minBy(_.h).h - minY
+        grid.keys.filter(_.c == j).minBy(_.r).r - minY
       }
     }
     case class State(jet: Int, rock: Int, surface: Seq[Long])
@@ -91,7 +91,7 @@ object Day17 extends common.AoC(17, 2022) {
     while (rocks < 1000000 && (pattern.isEmpty || rocks < maxRocks)) {
       if (pattern.isEmpty) {
         val state = State(jet, rock, surface())
-        val height = -grid.min.h
+        val height = -grid.min.r
         states.get(state) match {
           case None => states(state) = Pair(height, rocks)
           case Some(Pair(prevH, prevR)) =>
@@ -109,7 +109,7 @@ object Day17 extends common.AoC(17, 2022) {
       rock = (rock + 1) % Rock.kinds
       rocks += 1
     }
-    val height = -grid.min.h
+    val height = -grid.min.r
     val deltaH = height - prevHeight
     val Pattern(init, steady, Pair(_, rem)) = pattern.get
     Pattern(init, steady, Pair(deltaH, rem))

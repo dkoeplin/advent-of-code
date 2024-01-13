@@ -25,8 +25,8 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
   def y: T = getOrElse(1, num.fromInt(1))
   def z: T = getOrElse(2, num.fromInt(1))
 
-  def w: T = getOrElse(rank - 1, num.fromInt(1))
-  def h: T = getOrElse(rank - 2, num.fromInt(1))
+  def r: T = getOrElse(rank - 2, num.fromInt(1))
+  def c: T = getOrElse(rank - 1, num.fromInt(1))
 
   def +(rhs: T): Pos[T] = Pos(iterator.map{x => x + rhs})
   def -(rhs: T): Pos[T] = Pos(iterator.map{x => x - rhs})
@@ -48,7 +48,7 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
   def !=(rhs: Pos[T]): Boolean = inds != rhs.inds
   override def hashCode(): Int = inds.hashCode()
 
-  def isIn(volume: Volume[T]): Boolean
+  def isIn(volume: Cube[T]): Boolean
     = zipped(iterator, volume.min.iterator, volume.max.iterator).forall{case Seq(i, min, max) => i >= min && i <= max }
 
   def manhattanDist(rhs: Pos[T]): T = iterator.zip(rhs.iterator).map{case (a,b) => num.abs(a - b) }.sum
@@ -59,7 +59,7 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
 
   def magnitude: Double = dist(Pos.zero[T](rank))
 
-  def to(rhs: Pos[T]): Volume[T] = new Volume[T](this, rhs)
+  def to(rhs: Pos[T]): Cube[T] = new Cube[T](this, rhs)
 
   /// Returns a new Pos with only the given dimension(s).
   def keepDims(dims: Set[Int]): Pos[T] = Pos(iterator.zipWithIndex.filter{case (_,i) => dims.contains(i) }.map(_._1))
@@ -86,7 +86,7 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
     Pos(before ++ Iterator(i) ++ after)
   }
 
-  def t: Pos[T] = Pos(iterator.take(rank - 2) ++ Iterator(w, h))
+  def t: Pos[T] = Pos(iterator.take(rank - 2) ++ Iterator(c, r))
 
   def toDoubles: Pos[Double] = Pos(inds.map(num.toDouble))
   def toInts: Pos[Int] = Pos(inds.map(num.toInt))
@@ -115,9 +115,9 @@ object Pos {
   /**
    * Returns an iterator over all Pos of the given rank where exactly one index is non-zero and either -1 or 1.
    */
-  def nondiag[T](rank: Int)(implicit int: Integral[T]): Iterator[Pos[T]] = {
-    Iterator.tabulate(rank) { i => apply(Iterator.tabulate(rank) { j => if (j == i) int.fromInt(-1) else int.zero }) } ++
-      Iterator.tabulate(rank) { i => apply(Iterator.tabulate(rank) { j => if (j == i) int.fromInt(1) else int.zero }) }
+  def nondiag[T](rank: Int)(implicit num: Numeric[T]): Iterator[Pos[T]] = {
+    Iterator.tabulate(rank) { i => apply(Iterator.tabulate(rank) { j => if (j == i) num.fromInt(-1) else num.zero }) } ++
+      Iterator.tabulate(rank) { i => apply(Iterator.tabulate(rank) { j => if (j == i) num.fromInt(1) else num.zero }) }
   }
 
   /**

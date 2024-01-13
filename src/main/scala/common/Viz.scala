@@ -14,15 +14,15 @@ object Viz extends SimpleSwingApplication {
   implicit class GraphicsOps(g: Graphics2D) {
     def up(pos: Idx, h: Int, w: Int): Unit = {
       g setColor green
-      g.fillPolygon(Array(pos.w, pos.w + w/2, pos.w + w), Array(pos.h, pos.h - h, pos.h), 3)
+      g.fillPolygon(Array(pos.c, pos.c + w/2, pos.c + w), Array(pos.r, pos.r - h, pos.r), 3)
     }
     def down(pos: Idx, h: Int, w: Int): Unit = {
       g setColor red
-      g.fillPolygon(Array(pos.w, pos.w + w/2, pos.w + w), Array(pos.h - h, pos.h, pos.h - h), 3)
+      g.fillPolygon(Array(pos.c, pos.c + w/2, pos.c + w), Array(pos.r - h, pos.r, pos.r - h), 3)
     }
     def rectangle(pos: Idx, h: Int, w: Int): Unit = {
       g setColor bg
-      g fillRect(pos.w, pos.h, w, h)
+      g fillRect(pos.c, pos.r, w, h)
     }
   }
 

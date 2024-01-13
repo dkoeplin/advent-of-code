@@ -2,13 +2,13 @@ package Year2023
 
 import common.algorithm.LongestPath
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Matrix, Volume}
+import common.immutable.{Constructable, Cube, Matrix}
 import common.parse
 
 import scala.collection.immutable.VectorMap
 
 object Day23 extends common.AoC(23, 2023) {
-  case class Trails(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
+  case class Trails(vol: Cube[Int], data: Array[Char]) extends Matrix(vol, data) {
     val start: Idx = indices.find{p => apply(p) != '#' }.get
     val end: Idx = indices.find{p => apply(p) != '#' }.get
     type VectorSet = VectorMap[Idx, Boolean]

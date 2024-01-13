@@ -1,11 +1,11 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Matrix, Volume}
+import common.immutable.{Cube, Matrix}
 import common.implicits.OptionOps._
 
 object Day18 extends common.AoC(18, 2023) {
-  type Rectangle = Volume[Int]
+  type Rectangle = Cube[Int]
 
   case class Instruction(dir: Idx, n: Int)
   object Instruction {
@@ -41,8 +41,8 @@ object Day18 extends common.AoC(18, 2023) {
 
     def expanded(t: Rectangle): Option[Rectangle] = if ((bounds union t) != bounds) None else {
       minCol(t).zip(maxCol(t)).flatMap{case (c0, c1) =>
-        val t2 = Volume(Idx(t.min.h, c0), Idx(t.max.h, c1))
-        minRow(t2).zip(maxRow(t2)).map{case (r0, r1) => Volume(Idx(r0, c0), Idx(r1, c1)) }
+        val t2 = Cube(Idx(t.min.r, c0), Idx(t.max.r, c1))
+        minRow(t2).zip(maxRow(t2)).map{case (r0, r1) => Cube(Idx(r0, c0), Idx(r1, c1)) }
       }
     }
 
@@ -51,28 +51,28 @@ object Day18 extends common.AoC(18, 2023) {
       def add(r: Rectangle)(func: Option[Int] => Option[Int]): Diff = Diff(remaining.flatMap(_ diff r), func(x))
     }
 
-    def left(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.rows overlaps r.rows).filter(_.max.w < r.min.w)
-    def right(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.rows overlaps r.rows).filter(_.min.w > r.max.w)
-    def above(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.cols overlaps r.cols).filter(_.max.h < r.min.h)
-    def below(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.cols overlaps r.cols).filter(_.min.h > r.max.h)
+    def left(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.rows overlaps r.rows).filter(_.max.c < r.min.c)
+    def right(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.rows overlaps r.rows).filter(_.min.c > r.max.c)
+    def above(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.cols overlaps r.cols).filter(_.max.r < r.min.r)
+    def below(r: Rectangle): Iterator[Rectangle] = dug.iterator.filter(_.cols overlaps r.cols).filter(_.min.r > r.max.r)
 
     def minCol(r: Rectangle): Option[Int]
-      = Some(left(r).foldLeft(new Diff(r.rows)){(diff, r) => diff.add(r.rows)(_ max r.max.w) })
+      = Some(left(r).foldLeft(new Diff(r.rows)){(diff, r) => diff.add(r.rows)(_ max r.max.c) })
         .filter(_.remaining.isEmpty)
         .flatMap(_.x.map(_ + 1))
 
     def maxCol(r: Rectangle): Option[Int]
-      = Some(right(r).foldLeft(new Diff(r.rows)){(diff, r) => diff.add(r.rows)(_ min r.min.w) })
+      = Some(right(r).foldLeft(new Diff(r.rows)){(diff, r) => diff.add(r.rows)(_ min r.min.c) })
         .filter(_.remaining.isEmpty)
         .flatMap(_.x.map(_ - 1))
 
     def minRow(r: Rectangle): Option[Int]
-      = Some(above(r).foldLeft(new Diff(r.cols)){(diff, r) => diff.add(r.cols)(_ max r.max.h) })
+      = Some(above(r).foldLeft(new Diff(r.cols)){(diff, r) => diff.add(r.cols)(_ max r.max.r) })
         .filter(_.remaining.isEmpty)
         .flatMap(_.x.map(_ + 1))
 
     def maxRow(r: Rectangle): Option[Int]
-      = Some(below(r).foldLeft(new Diff(r.cols)){(diff, r) => diff.add(r.cols)(_ min r.min.h) })
+      = Some(below(r).foldLeft(new Diff(r.cols)){(diff, r) => diff.add(r.cols)(_ min r.min.r) })
         .filter(_.remaining.isEmpty)
         .flatMap(_.x.map(_ - 1))
 
@@ -83,10 +83,10 @@ object Day18 extends common.AoC(18, 2023) {
     def area: Int = dug.iterator.map(_.size).sum
   }
   object Lagoon {
-    def start: Lagoon = Lagoon(Set.empty, Volume.unit(Idx(0,0)))
+    def start: Lagoon = Lagoon(Set.empty, Cube.unit(Idx(0,0)))
     def apply(insts: Iterator[Instruction]): Lagoon = insts.foldLeft((Idx(0,0), Lagoon.start)){
       case ((pos,state), inst) =>
-        val trench = Volume(pos + inst.dir, pos + inst.dir*inst.n)
+        val trench = Cube(pos + inst.dir, pos + inst.dir*inst.n)
         (trench.r, Lagoon(dug = state.dug + trench, state.bounds union trench))
     }._2
   }

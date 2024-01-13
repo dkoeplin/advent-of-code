@@ -22,9 +22,9 @@ object Day22 extends common.AoC(22, 2022) {
 
   case class PosFacing(x: Idx, facingIdx: Int) {
     val facing: Idx = PosFacing.facings(facingIdx)
-    def password: Long = 1000 * (x.h + 1) + 4 * (x.w + 1) + facingIdx
+    def password: Long = 1000 * (x.r + 1) + 4 * (x.c + 1) + facingIdx
     def char: Char = PosFacing.chars(facingIdx)
-    override def toString: String = s"$char(${x.h},${x.w})"
+    override def toString: String = s"$char(${x.r},${x.c})"
   }
   object PosFacing {
     def apply(x: Idx, facing: Idx): PosFacing = PosFacing(x, facings.indexOf(facing))
@@ -47,10 +47,10 @@ object Day22 extends common.AoC(22, 2022) {
     }
   }}
   def wrapped(pos: Idx, facing: Idx): Idx = facing match {
-    case Idx.D2.L if pos.w < rowBounds(pos.h).min => Idx(pos.h, rowBounds(pos.h).max)
-    case Idx.D2.R if pos.w > rowBounds(pos.h).max => Idx(pos.h, rowBounds(pos.h).min)
-    case Idx.D2.U if pos.h < colBounds(pos.w).min => Idx(colBounds(pos.w).max, pos.w)
-    case Idx.D2.D if pos.h > colBounds(pos.w).max => Idx(colBounds(pos.w).min, pos.w)
+    case Idx.D2.L if pos.c < rowBounds(pos.r).min => Idx(pos.r, rowBounds(pos.r).max)
+    case Idx.D2.R if pos.c > rowBounds(pos.r).max => Idx(pos.r, rowBounds(pos.r).min)
+    case Idx.D2.U if pos.r < colBounds(pos.c).min => Idx(colBounds(pos.c).max, pos.c)
+    case Idx.D2.D if pos.r > colBounds(pos.c).max => Idx(colBounds(pos.c).min, pos.c)
     case _ => pos
   }
   def getNext(current: Idx, facing: Idx): Option[Idx] = {

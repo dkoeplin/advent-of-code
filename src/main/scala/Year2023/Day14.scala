@@ -1,12 +1,12 @@
 package Year2023
 
 import common.immutable.Pos._
-import common.immutable.{Constructable, Matrix, Volume}
+import common.immutable.{Constructable, Cube, Matrix}
 import common.implicits.IteratorOps._
 import common.parse
 
 object Day14 extends common.AoC(14, 2023) {
-  case class Platform(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
+  case class Platform(vol: Cube[Int], data: Array[Char]) extends Matrix(vol, data) {
     private def slide(empty: Int, rocks: Int, reverse: Boolean): String
       = if (empty + rocks == 0) "#" else if (!reverse) "." * empty + "O" * rocks else "O" * rocks + "." * empty
 
@@ -15,10 +15,10 @@ object Day14 extends common.AoC(14, 2023) {
     }
 
     def tilt(delta: Idx): Platform = {
-      val reverse = delta.w < 0 || delta.h < 0
-      val vectors = if (delta.h != 0) cols else rows
+      val reverse = delta.c < 0 || delta.r < 0
+      val vectors = if (delta.r != 0) cols else rows
       val tilted = Platform(vol, vectors.flatMap{vec => slide(vec, reverse) }.toArray)
-      if (delta.h != 0) tilted.t.to[Platform] else tilted
+      if (delta.r != 0) tilted.t.to[Platform] else tilted
     }
 
     override def hashCode(): Int = rocks.hashCode()
@@ -47,7 +47,7 @@ object Day14 extends common.AoC(14, 2023) {
     }
 
     lazy val rocks: Set[Idx] = indices.filter{pos => apply(pos) == 'O'}.toSet
-    lazy val load: Int = rocks.iterator.map{pos => H - pos.h}.sum
+    lazy val load: Int = rocks.iterator.map{pos => H - pos.r}.sum
     private var cycle: Option[Cycle] = None
   }
   implicit object Platform extends Constructable[Char,Platform]

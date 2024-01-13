@@ -41,7 +41,7 @@ object Day09 extends common.AoC(9, 2021) {
           val label = if (up != -1 && left != -1 && up != left) {
             val removed = Math.max(up, left)
             val intersect = Math.min(up, left)
-            sizes(removed).foreach { pos => basins(pos.h)(pos.w) = intersect }
+            sizes(removed).foreach { pos => basins(pos.r)(pos.c) = intersect }
             sizes(intersect) ++= sizes(removed)
             sizes(removed) = Nil
             intersect

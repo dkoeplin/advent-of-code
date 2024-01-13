@@ -1,7 +1,7 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Matrix, Volume}
+import common.immutable.{Constructable, Cube, Matrix}
 import common.parse
 
 object Day16 extends common.AoC(16, 2023) {
@@ -24,7 +24,7 @@ object Day16 extends common.AoC(16, 2023) {
   case class State(beams: Set[Beam], visited: Set[Beam]) {
     def this(beam: Beam) = this(Set(beam), Set.empty)
   }
-  case class Contraption(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
+  case class Contraption(vol: Cube[Int], data: Array[Char]) extends Matrix(vol, data) {
     def move(beam: Beam): Iterator[Beam]
       = get(beam.pos).iterator.flatMap{c => splitOrReflect(c, beam.dir) }
                               .map{d => Beam(beam.pos + d, d) }
@@ -36,10 +36,10 @@ object Day16 extends common.AoC(16, 2023) {
     }.dropWhile(_.beams.nonEmpty).head.visited.map(_.pos)
 
     def beams(start: Idx): Iterator[Beam] = {
-      (if (start.h == 0) Iterator(Idx.D2.D) else Iterator.empty) ++
-        (if (start.h == H - 1) Iterator(Idx.D2.U) else Iterator.empty) ++
-        (if (start.w == 0) Iterator(Idx.D2.R) else Iterator.empty) ++
-        (if (start.w == W - 1) Iterator(Idx.D2.L) else Iterator.empty)
+      (if (start.r == 0) Iterator(Idx.D2.D) else Iterator.empty) ++
+        (if (start.r == H - 1) Iterator(Idx.D2.U) else Iterator.empty) ++
+        (if (start.c == 0) Iterator(Idx.D2.R) else Iterator.empty) ++
+        (if (start.c == W - 1) Iterator(Idx.D2.L) else Iterator.empty)
     }.map{d => Beam(start, d) }
 
     def edges: Iterator[Beam] =

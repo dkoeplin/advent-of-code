@@ -6,14 +6,14 @@ import scala.language.implicitConversions
 import scala.reflect.ClassTag
 
 trait Constructable[A,T] {
-  def apply(volume: Volume[Int], data: Array[A]): T
+  def apply(volume: Cube[Int], data: Array[A]): T
 }
 
-class TensorView[A](vol: Volume[Int], data: IterableOnce[A]) {
+class TensorView[A](vol: Cube[Int], data: IterableOnce[A]) {
   def shape: Pos[Int] = vol.shape
   def strides: Pos[Int] = vol.shape.strides
 
-  def volume: Volume[Int] = vol
+  def volume: Cube[Int] = vol
   def iterator: Iterator[A] = data.iterator
 
   def rank: Int = vol.rank
@@ -45,7 +45,7 @@ object TensorView {
   implicit def make[A:ClassTag,T](view: TensorView[A])(implicit c: Constructable[A,T]): T = view.to[T]
 }
 
-class Tensor[A](vol: Volume[Int], data: Array[A]) extends TensorView[A](vol, data) {
+class Tensor[A](vol: Cube[Int], data: Array[A]) extends TensorView[A](vol, data) {
   protected def flatten(i: Idx): Int = ((i - vol.min) * strides).sum
 
   def raw: Array[A] = data
@@ -64,8 +64,8 @@ class Tensor[A](vol: Volume[Int], data: Array[A]) extends TensorView[A](vol, dat
 }
 
 trait StaticTensorMethods[T[X]<:Tensor[X]] {
-  def apply[A](volume: Volume[Int], data: Array[A]): T[A]
-  def apply[A](shape: Idx, data: Array[A]): T[A] = apply(Volume(Pos.zero[Int](shape.rank), shape - 1), data)
+  def apply[A](volume: Cube[Int], data: Array[A]): T[A]
+  def apply[A](shape: Idx, data: Array[A]): T[A] = apply(Cube(Pos.zero[Int](shape.rank), shape - 1), data)
   def apply[A:ClassTag](iter: Iterator[Iterable[A]]): T[A] = {
     val data = iter.toArray
     val rows = data.length
@@ -76,18 +76,18 @@ trait StaticTensorMethods[T[X]<:Tensor[X]] {
   def fill[A:ClassTag](shape: Idx, value: A): T[A] = apply(shape, Array.fill(shape.product)(value))
 
   private class StaticConstructor[A](x: StaticTensorMethods[T]) extends Constructable[A,T[A]] {
-    def apply(vol: Volume[Int], data: Array[A]): T[A] = x(vol, data)
+    def apply(vol: Cube[Int], data: Array[A]): T[A] = x(vol, data)
   }
   implicit def constructable[A]: Constructable[A,T[A]] = new StaticConstructor[A](this)
 }
 
 object Tensor extends StaticTensorMethods[Tensor] {
-  def apply[A](volume: Volume[Int], data: Array[A]): Tensor[A] = new Tensor(volume, data)
+  def apply[A](volume: Cube[Int], data: Array[A]): Tensor[A] = new Tensor(volume, data)
 
   // move me
   implicit class Tuple3Ops(x: (scala.Range, scala.Range, scala.Range)) {
     def apply[A:ClassTag](func: (Int, Int, Int) => A): TensorView[A] = {
-      val volume = Volume(Pos(x._1.min, x._2.min, x._3.min), Pos(x._1.max, x._2.max, x._3.max))
+      val volume = Cube(Pos(x._1.min, x._2.min, x._3.min), Pos(x._1.max, x._2.max, x._3.max))
       new TensorView(volume, volume.iterator.map { case Pos(x, y, z) => func(x, y, z) })
     }
   }

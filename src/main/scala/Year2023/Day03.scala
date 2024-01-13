@@ -7,10 +7,10 @@ object Day03 extends common.AoC(3, 2023) {
   trait Feature {
     def start: Pos[Long]
     def len: Int
-    def posList: Iterator[Pos[Long]] = (0 until len).iterator.map{j => Pos(start.h, start.w + j) }
-    def surrounding: Iterator[Pos[Long]] = Seq(start.h - 1, start.h + 1).iterator.flatMap { i =>
-      (start.w - 1 to start.w + len).map{ j => Pos(i, j) }
-    } ++ Seq(Pos(start.h, start.w - 1), Pos(start.h, start.w + len))
+    def posList: Iterator[Pos[Long]] = (0 until len).iterator.map{j => Pos(start.r, start.c + j) }
+    def surrounding: Iterator[Pos[Long]] = Seq(start.r - 1, start.r + 1).iterator.flatMap { i =>
+      (start.c - 1 to start.c + len).map{ j => Pos(i, j) }
+    } ++ Seq(Pos(start.r, start.c - 1), Pos(start.r, start.c + len))
   }
   case class Symbol(value: Char, start: Pos[Long]) extends Feature { def len: Int = 1 }
   // A symbol is any non-digit that isn't a period

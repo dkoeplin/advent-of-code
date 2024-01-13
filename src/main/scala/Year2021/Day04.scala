@@ -13,15 +13,15 @@ case class Board(id: Int, board: Seq[Seq[Int]]) {
   val cols: mutable.Seq[Int] = mutable.Seq.fill(numRows)(0)
 
   def posOf(x: Int): Option[Pos[Int]] = board.zipWithIndex.flatMap{case (row,idx) =>
-    Some(Pos(idx, row.indexOf(x))).filter(_.h != -1)
+    Some(Pos(idx, row.indexOf(x))).filter(_.r != -1)
   }.headOption
 
   def register(x: Int): Boolean = posOf(x).exists{pos =>
-    rows(pos.h) += 1
-    cols(pos.w) += 1
+    rows(pos.r) += 1
+    cols(pos.c) += 1
     score = score - x
-    println(s"Year2021.Board $id: $x at (${pos.h}, ${pos.w}) (row: ${rows(pos.h)} / $numRows, col: ${cols(pos.w)} / $numCols)")
-    rows(pos.h) == numRows || cols(pos.w) == numCols
+    println(s"Year2021.Board $id: $x at (${pos.r}, ${pos.c}) (row: ${rows(pos.r)} / $numRows, col: ${cols(pos.c)} / $numCols)")
+    rows(pos.r) == numRows || cols(pos.c) == numCols
   }
 }
 

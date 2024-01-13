@@ -1,7 +1,7 @@
 package common
 
 import common.immutable.Pos.Idx
-import common.immutable.{Pos, TensorView, Volume}
+import common.immutable.{Cube, Pos, TensorView}
 
 object parse {
   def apply[A](file: scala.io.BufferedSource)(func: Char => A): TensorView[A] = apply(file.getLines())(func)
@@ -9,7 +9,7 @@ object parse {
     val (x, y) = lines.iterator.duplicate
     val cols = x.nextOption().map(_.length).getOrElse(1)
     val rows = x.size + 1
-    new TensorView(Volume(Pos.zero[Int](2), Idx(rows - 1, cols - 1)), y.flatten.map(func))
+    new TensorView(Cube(Pos.zero[Int](2), Idx(rows - 1, cols - 1)), y.flatten.map(func))
   }
 
   def chars(file: scala.io.BufferedSource): TensorView[Char] = parse(file)(identity)

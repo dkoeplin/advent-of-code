@@ -10,8 +10,8 @@ object Day14 extends common.AoC(14, 2022) {
   paths.foreach{path => path.sliding(2).foreach{case Array(a,b) => (a to b).iterator.foreach{i => grid(i) = '#' }}}
 
   def flood(floor: Option[Long]): Long = {
-    def inBounds(pos: Idx): Boolean = if (floor.nonEmpty) pos.h < floor.get else pos isIn (grid.min to grid.max)
-    def isAir(pos: Idx): Boolean = !floor.contains(pos.h) && grid(pos) == '.'
+    def inBounds(pos: Idx): Boolean = if (floor.nonEmpty) pos.r < floor.get else pos isIn (grid.min to grid.max)
+    def isAir(pos: Idx): Boolean = !floor.contains(pos.r) && grid(pos) == '.'
 
     var continue: Boolean = true
     val moves = Seq(Idx.D2.D, Idx.D2.D + Idx.D2.L, Idx.D2.D + Idx.D2.R)
@@ -33,7 +33,7 @@ object Day14 extends common.AoC(14, 2022) {
     count
   }
   println("== Part 1 ==")
-  val maxY = grid.max.h
+  val maxY = grid.max.r
   val part1 = flood(floor=None)
   println(s"Part1: $part1")
 

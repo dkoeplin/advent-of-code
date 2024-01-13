@@ -9,10 +9,10 @@ object Day09 extends common.AoC(9, 2022) {
 
   def move(head: Idx, tail: Idx): Idx = {
     val diff = head - tail
-    if (Math.abs(diff.h) <= 1 && Math.abs(diff.w) <= 1)
+    if (Math.abs(diff.r) <= 1 && Math.abs(diff.c) <= 1)
       Idx(0, 0)
     else
-      Idx(math.signum(diff.h), math.signum(diff.w))
+      Idx(math.signum(diff.r), math.signum(diff.c))
   }
   def compute(n: Int): Int = {
     val chain = List.fill(n){ Idx(0, 0) }

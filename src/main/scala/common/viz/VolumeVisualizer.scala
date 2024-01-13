@@ -1,10 +1,10 @@
 package common.viz
 
-import common.immutable.{Pos, Volume}
+import common.immutable.{Cube, Pos}
 
 import scala.swing.{Color, Frame, Graphics2D}
 
-case class VolumeVisualizer[A](volumes: IterableOnce[Volume[A]]) extends Visualizer {
+case class VolumeVisualizer[A](volumes: IterableOnce[Cube[A]]) extends Visualizer {
   private lazy val RGB_MAX: Int = 1 << 23
 
   def apply(frame: Frame, g: Graphics2D): Unit = {
@@ -23,7 +23,7 @@ case class VolumeVisualizer[A](volumes: IterableOnce[Volume[A]]) extends Visuali
     scaled.zipWithIndex.foreach{case (v, i) =>
       val color = new Color(util.Random.nextInt(255), util.Random.nextInt(255), util.Random.nextInt(255))
       g.setColor(color)
-      g.fillRect(v.min.h, v.min.w, v.shape.h, v.shape.w)
+      g.fillRect(v.min.r, v.min.c, v.shape.r, v.shape.c)
     }
   }
 }

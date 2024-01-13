@@ -1,11 +1,11 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Matrix, Volume}
+import common.immutable.{Constructable, Cube, Matrix}
 import common.{math, parse}
 
 object Day21 extends common.AoC(21, 2023) {
-  case class GardenMap(vol: Volume[Int], data: Array[Char]) extends Matrix(vol, data) {
+  case class GardenMap(vol: Cube[Int], data: Array[Char]) extends Matrix(vol, data) {
     lazy val start: Idx = indices.find{p => apply(p) == 'S' }.get
     def next(p: Idx): Iterator[Idx]
       = Idx.D2.nondiag.iterator.map(_ + p).filter { p => get(p).exists { c => c == '.' || c == 'S' } }
@@ -33,10 +33,10 @@ object Day21 extends common.AoC(21, 2023) {
         else            totalOdd*nOddTiles + totalEven*nEvenTiles
       }
       val partialMaps = {
-        val top = reachable(Idx(H - 1, start.w), remain).size.toLong
-        val bottom = reachable(Idx(0, start.w), remain).size.toLong
-        val left = reachable(Idx(start.h, W - 1), remain).size.toLong
-        val right = reachable(Idx(start.h, 0), remain).size.toLong
+        val top = reachable(Idx(H - 1, start.c), remain).size.toLong
+        val bottom = reachable(Idx(0, start.c), remain).size.toLong
+        val left = reachable(Idx(start.r, W - 1), remain).size.toLong
+        val right = reachable(Idx(start.r, 0), remain).size.toLong
         val top_left = radius * reachable(Idx(H - 1, W - 1), remain).size.toLong
         val top_right = radius * reachable(Idx(H - 1, 0), remain).size.toLong
         val bottom_left = radius * reachable(Idx(0, W - 1), remain).size.toLong
