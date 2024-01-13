@@ -14,8 +14,11 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   def iterator: Iterator[Part] = parts.iterator
 
   def scale(n: Double): this.type = {
-    val shift = bbox.min * n
-    parts = parts.map(_ * n + shift)
+    parts = parts.map{p =>
+      val shape = p.volume.shape
+      val next = Cube(p.volume.min + shape*(0.5 - 0.5*n), p.volume.min + shape*(0.5 + 0.5*n))
+      Part(next, p.material)
+    }
     this
   }
 
@@ -40,11 +43,7 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   def ==(rhs: Entity): Boolean = id == rhs.id
   def !=(rhs: Entity): Boolean = id != rhs.id
 
-  def draw(g: Graphics2D): Unit = parts.foreach{case Part(volume, material) =>
-    val v = volume.roundInt
-    g.setColor(material.color)
-    g.fill3DRect(v.min.x, v.min.y, v.shape.x, v.shape.y, true)
-  }
+  def draw(g: Graphics2D): Unit = parts.foreach(_.draw(g))
 
   def highlight(g: Graphics2D, brighter: Boolean): Unit = parts.foreach{case Part(volume, material) =>
     val border = volume.roundInt
@@ -54,16 +53,18 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
 
   def overlaps(rhs: Cube[Double]): Boolean = parts.exists(_.volume.overlaps(rhs))
   def contains(rhs: Pos[Double]): Boolean = parts.exists(_.volume.contains(rhs))
+  def at(rhs: Pos[Double]): Option[Part] = parts.find(_.volume.contains(rhs))
 
   def updateVelocity(): Pos[Double] = Pos(velocity.iterator.zipWithIndex.map{case (v, dim) =>
     val p = if (v >= 0) bbox.max(dim) else bbox.min(dim)
-    if (v != 0) {
+    val mayAccel = World.isVertical(dim) && falls
+    if (v != 0 || mayAccel) {
       val b = bbox.alter(dim, p, p + v) // travel range in this tick
       world.entities.overlappingExcept(b, Some(this)) match {
         case entities if entities.nonEmpty =>
           val top = if (v >= 0) entities.minBy(_.bbox.min(dim)) else entities.maxBy(_.bbox.max(dim))
           val bound = if (v >= 0) top.bbox.min(dim) else top.bbox.max(dim)
-          bound - v
+          bound - p
         case _ if World.isVertical(dim) && falls =>
           Math.min(Exp.terminalVelocity, v + Exp.gravity)
         case _ => v
@@ -79,7 +80,7 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
     if (dying) {
       death += 1
       scale(Entity.kDeathRate)
-      if (death > 20) die()
+      if (death > Entity.kDeathTime) die()
     } else if (velocity.magnitude == 0) {
       sleep()
     } else if (initialVelocity.magnitude == 0) {
@@ -124,6 +125,7 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   final private var death: Int = 0
 }
 object Entity {
-  val kDeathRate: Double = 0.8 // Shrink factor per tick while dying
+  val kDeathRate: Double = 0.9 // Shrink factor per tick while dying
+  val kDeathTime: Int = 40
   val kUpdateRange: Int = 5
 }

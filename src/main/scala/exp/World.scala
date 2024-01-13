@@ -44,8 +44,13 @@ class World(val parent: Exp.Main) extends Component {
 
     def find(x: Pos[Int]): Option[Entity] = {
       val p = x.toDoubles
-      entities.all.find{e => e.contains(p) && e.alive }
+      entities.nearby(Cube(p,p)).find{e => e.contains(p) && e.alive }
     }
+    def findVolume(x: Pos[Int]): Option[entity.Part] = {
+      val p = x.toDoubles
+      entities.nearby(Cube(p,p)).iterator.find(_.contains(p)).flatMap(_.at(p))
+    }
+
     def overlappingExcept(x: Cube[Double], target: Option[Entity]): Iterator[Entity] = {
       entities.nearby(x).filter{e => !target.contains(e) && e.overlaps(x) && e.alive }
     }
@@ -87,6 +92,14 @@ class World(val parent: Exp.Main) extends Component {
 
   override def paint(g: Graphics2D): Unit = {
     entities.all.foreach(_.draw(g))
+    /*val wsize = Cube(Pos(0,0), parent.windowSize)
+    wsize.iteratorBy(20).iterator.foreach{p =>
+      entities.findVolume(p).foreach{part =>
+        g.setColor(part.material.color)
+        g.fillRect(p.x, p.y, 20, 20)
+      }
+    }*/
+
     pending.foreach(_.draw(g))
     hovered.foreach{e =>
       e.highlight(g, brighter = true)
@@ -108,7 +121,7 @@ class World(val parent: Exp.Main) extends Component {
 
     case KeyPressed(_, Key.B, _, _) =>
       val debug = children.find(_.isInstanceOf[window.Debug])
-      children = (if (debug.isEmpty) children + new window.Debug(this) else children - debug.get)
+      children = if (debug.isEmpty) children + new window.Debug(this) else children - debug.get
 
     case MouseClicked(src, TargetedEntity(e), keys, n, _) => // do nothing
     case MousePressed(src, TargetedEntity(e), keys, n, _) => // do nothing
@@ -116,7 +129,7 @@ class World(val parent: Exp.Main) extends Component {
       e.kill()
       hovered = None
 
-    case MousePressed(src, pt, keys, n, _) =>
+    case MousePressed(src, pt, mods, n, _) if (mods & Key.Modifier.Shift) > 0 =>
       val x = (pt: Pos[Int]).toDoubles
       pending = Some(new Block(entities.nextId, this, Cube(x, x), material.Test.random))
     case MouseDragged(src, pt, keys) if pending.nonEmpty =>
@@ -139,7 +152,7 @@ class World(val parent: Exp.Main) extends Component {
   }
 }
 object World {
-  def isVertical(dim: Int): Boolean = (dim == 1)
+  def isVertical(dim: Int): Boolean = { dim == 1 }
   def isVertical[T:Numeric](x: Pos[T]): Boolean = isVertical(dim(x))
   def dim[T:Numeric](delta: Pos[T]): Int = delta.iterator.zipWithIndex.find(_._1 != implicitly[Numeric[T]].zero).get._2
 }

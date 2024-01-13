@@ -37,8 +37,10 @@ class Cube[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vo
     = zipped(min.iterator, max.iterator, rhs.min.iterator, rhs.max.iterator)
     .forall{case Seq(amin, amax, bmin, bmax) => bmin <= amax && bmax >= amin }
 
-  def iterator(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = false)
-  def reverseIterator(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = true)
+  def iterator(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = false, int.one)
+  def reverseIterator(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = true, int.one)
+
+  def iteratorBy(step: T)(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = false, by = step)
 
   def union(rhs: Cube[T]): Cube[T] = Cube(min.min(rhs.min), max.max(rhs.max))
   def moveTo(dim: Int, pos: T): Cube[T] = {
@@ -64,7 +66,7 @@ class Cube[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vo
   def expand(a: T, b: T): Cube[T] = Cube(min.append(a), max.append(b))
 
   /// Returns a copy with the given dimension changed to the [a, b]
-  def alter(dim: Int, a: T, b: T): Cube[T] = Cube(min.alter(dim, a), max.alter(dim, b))
+  def alter(dim: Int, a: T, b: T): Cube[T] = Cube(min.alter(dim, num.min(a, b)), max.alter(dim, num.max(a, b)))
 
   /// Returns a new Volume with a dimension inserted at the given index
   def insert(dim: Int, a: T, b: T): Cube[T] = Cube(min.insert(dim, a), max.insert(dim, b))
@@ -115,12 +117,12 @@ class Cube[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vo
 }
 
 object Cube {
-  private def anyIterator[T](volume: Cube[T], reverse: Boolean)(implicit int: Integral[T]): Iterator[Pos[T]] = {
+  private def anyIterator[T](volume: Cube[T], reverse: Boolean, by: T)(implicit int: Integral[T]): Iterator[Pos[T]] = {
     volume.min.iterator.zip(volume.max.iterator).foldLeft(Iterator.empty[Seq[T]]){case (iters, (min, max)) =>
       val start = if (reverse) max else min
       val end = if (reverse) min else max
-      val step = if (end >= start) 1 else -1
-      val range = NumericRange.inclusive(start, end, int.fromInt(step))
+      val step = if (end >= start) by else int.negate(by)
+      val range = NumericRange.inclusive(start, end, step)
       if (!iters.hasNext) range.iterator.map(Seq.apply(_)) else iters.flatMap{idx => range.iterator.map{x => idx :+ x }}
     }.map(_.iterator).map{seq => Pos[T](seq) }
   }
