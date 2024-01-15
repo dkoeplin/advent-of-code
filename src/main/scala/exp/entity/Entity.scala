@@ -1,24 +1,20 @@
-package exp
+package exp.entity
 
 import common.immutable.{Cube, Pos}
-import exp.entity.Part
-
-import scala.swing.Graphics2D
+import exp.draw.Draw2D
+import exp.message.Message
+import exp.{Exp, World, message}
 
 abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   protected var velocity: Pos[Double] = Pos(0, 0)
   protected var parts: Array[Part] = vs
-  def bbox: Cube[Double] = parts.iterator.map(_.volume).reduce(_ union _)
   def size: Double = parts.iterator.map(_.volume.size).sum
   def iterator: Iterator[Part] = parts.iterator
 
-  def scale(n: Double): this.type = {
-    parts = parts.map{p =>
-      val shape = p.volume.shape
-      val next = Cube(p.volume.min + shape*(0.5 - 0.5*n), p.volume.min + shape*(0.5 + 0.5*n))
-      Part(next, p.material)
-    }
-    this
+  def scale(n: Double): Unit = parts = parts.map{p =>
+    val shape = p.volume.shape
+    val next = Cube(p.volume.min + shape*(0.5 - 0.5*n), p.volume.min + shape*(0.5 + 0.5*n))
+    Part(next, p.material)
   }
 
   object State {
@@ -30,9 +26,16 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
 
   def falls: Boolean = !dying && parts.forall(_.material.falls)
 
-  def above: Iterator[Entity] = world.entities.overlappingExcept(bbox.above(Entity.kUpdateRange), Some(this))
-  def bordering(width: Double = Entity.kUpdateRange): Iterator[Entity]
-    = bbox.borders(width).flatMap{border => world.entities.overlappingExcept(border, Some(this)) }
+  def above: Iterator[Entity] = parts.iterator.flatMap{part =>
+    world.entities.overlappingExcept(part.volume.above(Entity.kUpdateRange), Some(this))
+  }
+  def bordering(width: Double = Entity.kUpdateRange): Iterator[Entity] = parts.iterator.flatMap{part =>
+    part.volume.borders(width).flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
+  }
+  // TODO: O(N^2): Memoize or figure out how to make faster
+  def borders(width: Double = 1): Iterator[Cube[Double]] = parts.iterator.flatMap{part =>
+    part.volume.borders(width).filterNot{b => parts.exists{p => p != part && p.volume.overlaps(b) }}
+  }
 
   override def hashCode(): Int = id.hashCode()
   override def equals(obj: Any): Boolean = obj match {
@@ -42,39 +45,44 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   def ==(rhs: Entity): Boolean = id == rhs.id
   def !=(rhs: Entity): Boolean = id != rhs.id
 
-  def draw(g: Graphics2D): Unit = parts.foreach(_.draw(g))
+  def draw(g: Draw2D): Unit = parts.foreach(_.draw(g))
 
-  def highlight(g: Graphics2D, brighter: Boolean): Unit = parts.foreach{case Part(volume, material) =>
-    val border = volume.roundInt
-    g.setColor(if (brighter) material.color.brighter() else material.color.darker())
-    g.fillRect(border.min.x, border.min.y, border.shape.x, border.shape.y)
+  def highlight(g: Draw2D, brighter: Boolean): Unit = parts.foreach{case Part(volume, material) =>
+    g.fillRect(volume, if (brighter) material.color.brighter() else material.color.darker())
   }
 
+  def overlappingParts(rhs: Cube[Double]): Iterator[Part] = parts.iterator.filter(_.volume.overlaps(rhs))
   def overlaps(rhs: Cube[Double]): Boolean = parts.exists(_.volume.overlaps(rhs))
   def contains(rhs: Pos[Double]): Boolean = parts.exists(_.volume.contains(rhs))
   def at(rhs: Pos[Double]): Option[Part] = parts.find(_.volume.contains(rhs))
 
-  def remove(rhs: Cube[Double]): Unit = {
+  def remove(rhs: Cube[Double]): Unit = if (alive) {
+    val nearby = bordering() // Get the nearby entities _before_ we remove the piece
     parts = parts.flatMap{case Part(volume, material) => (volume diff rhs).map{v => Part(v, material) }}
-    if (parts.isEmpty) die()
-    world.messages.broadcast(new message.Move(this), to=bordering())
+    if (parts.isEmpty) {
+      die()
+      world.messages.broadcast(new message.Removed(this), nearby)
+    } else {
+      world.messages.broadcast(new message.Move(this), nearby) // todo: changed, not move
+    }
   }
 
   def updateVelocity(): Pos[Double] = Pos(velocity.iterator.zipWithIndex.map{case (v, dim) =>
-    val p = if (v >= 0) bbox.max(dim) else bbox.min(dim)
     val mayAccel = World.isVertical(dim) && falls
-    if (v != 0 || mayAccel) {
-      val b = bbox.alter(dim, p, p + v) // travel range in this tick
-      world.entities.overlappingExcept(b, Some(this)) match {
-        case entities if entities.nonEmpty =>
-          val top = if (v >= 0) entities.minBy(_.bbox.min(dim)) else entities.maxBy(_.bbox.max(dim))
-          val bound = if (v >= 0) top.bbox.min(dim) else top.bbox.max(dim)
+    val reduce = {(a: Double, b: Double) => if (v > 0) Math.min(a,b) else Math.max(a,b)}
+    if (parts.isEmpty || (v == 0 && !mayAccel)) 0.0 else parts.iterator.map{part =>
+      val p = if (v >= 0) part.volume.max(dim) else part.volume.min(dim)
+      val b = part.volume.alter(dim, p, p + v) // travel range in this tick
+      world.entities.overlappingPartsExcept(b, Some(this)) match {
+        case others if others.nonEmpty =>
+          val top = if (v >= 0) others.minBy(_.volume.min(dim)) else others.maxBy(_.volume.max(dim))
+          val bound = if (v >= 0) top.volume.min(dim) else top.volume.max(dim)
           bound - p
         case _ if World.isVertical(dim) && falls =>
           Math.min(Exp.terminalVelocity, v + Exp.gravity)
         case _ => v
       }
-    } else 0
+    }.reduce(reduce)
   })
 
   def tick(): Unit = {
@@ -131,6 +139,6 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
 }
 object Entity {
   val kDeathRate: Double = 0.9 // Shrink factor per tick while dying
-  val kDeathTime: Int = 40
-  val kUpdateRange: Int = 5
+  val kDeathTime: Int = 40     // Number of ticks to spend in the "dying" animation
+  val kUpdateRange: Int = 5    // Number of pixels range to update on change by default
 }

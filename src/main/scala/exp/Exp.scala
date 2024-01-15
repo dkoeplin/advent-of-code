@@ -1,4 +1,5 @@
 package exp
+
 import common.immutable.Pos
 
 import java.awt.GraphicsEnvironment
@@ -21,6 +22,11 @@ object Exp extends scala.swing.SimpleSwingApplication {
     title = s"Test"
     background = new Color(0, 0, 0)
 
+    protected val emptyCursor: java.awt.Cursor
+    = peer.getToolkit.createCustomCursor(new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB),
+      new scala.swing.Point(), null)
+    peer.setCursor(emptyCursor)
+
     private val world = new World(this)
     contents = world
 
@@ -29,11 +35,11 @@ object Exp extends scala.swing.SimpleSwingApplication {
       Pos(wsize.width, wsize.height)
     }
 
-    private val gd = GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
-    if (gd.isFullScreenSupported) {
+    val device: java.awt.GraphicsDevice = GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice
+    if (device.isFullScreenSupported) {
       // peer.setUndecorated(true)
-      gd.setFullScreenWindow(peer)
-      size = gd.getDefaultConfiguration.getBounds.getSize
+      device.setFullScreenWindow(peer)
+      size = device.getDefaultConfiguration.getBounds.getSize
     } else {
       peer.setUndecorated(true)
       peer.setExtendedState(peer.getExtendedState | java.awt.Frame.MAXIMIZED_BOTH)

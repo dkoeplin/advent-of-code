@@ -1,11 +1,11 @@
 package exp
 
 import common.immutable.{Cube, Pos}
-import exp.entity.Block
+import exp.draw.Draw2D
+import exp.entity.{Block, Entity}
+import exp.screen.Screen
 
 import java.util.TimerTask
-import scala.collection.immutable.Queue
-import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.swing._
 import scala.swing.event._
@@ -17,64 +17,11 @@ class World(val parent: Exp.Main) extends Component {
   listenTo(mouse.moves)
   listenTo(keys)
 
-  object entities {
-    private var id: Int = 0
-    private val allEntities: mutable.LinkedHashSet[Entity] = mutable.LinkedHashSet.empty
-    private val awakeEntities: mutable.LinkedHashSet[Entity] = mutable.LinkedHashSet.empty
-
-    def nextId: Int = { id += 1; id }
-
-    def all: Iterator[Entity] = allEntities.iterator
-    def awake: Iterator[Entity] = awakeEntities.iterator
-
-    def +=(e: Entity): Unit = {
-      allEntities += e
-      awakeEntities += e
-    }
-    def -=(e: Entity): Unit = {
-      allEntities -= e
-      awakeEntities -= e
-    }
-    def ++=(e: IterableOnce[Entity]): Unit = {
-      allEntities ++= e
-      awakeEntities ++= e
-    }
-
-    // TODO: Limit this somehow
-    def nearby(x: Cube[Double]): Iterator[Entity] = allEntities.iterator
-
-    def find(x: Pos[Int]): Option[Entity] = {
-      val p = x.toDoubles
-      entities.nearby(Cube(p,p)).find{e => e.contains(p) && e.alive }
-    }
-    def findVolume(x: Pos[Int]): Option[entity.Part] = {
-      val p = x.toDoubles
-      entities.nearby(Cube(p,p)).iterator.find(_.contains(p)).flatMap(_.at(p))
-    }
-
-    def overlappingExcept(x: Cube[Double], target: Option[Entity]): Iterator[Entity] = {
-      entities.nearby(x).filter{e => !target.contains(e) && e.overlaps(x) && e.alive }
-    }
-
-    def notifyAwake(e: Entity): Unit = { awakeEntities += e }
-    def notifySleep(e: Entity): Unit = { awakeEntities -= e }
-    def notifyDead(e: Entity): Unit = { awakeEntities -= e; allEntities -= e }
-  }
-  object messages {
-    private val queues: mutable.HashMap[Int,Queue[Message]] = mutable.HashMap.empty
-    def broadcast(message: Message, to: IterableOnce[Entity]): Unit = to.iterator.foreach{dest =>
-      queues(dest.id) = queues.getOrElse(dest.id, Queue.empty).enqueue(message)
-      dest.wake()
-    }
-    def get(entity: Entity): Option[Message] = queues.get(entity.id).flatMap(_.dequeueOption).map{
-      case (msg, next) if next.nonEmpty => queues(entity.id) = next; msg
-      case (msg, next) => queues.remove(entity.id); msg
-    }
-  }
-
-  object TargetedEntity {
-    def unapply(x: Point): Option[Entity] = entities.find(x)
-  }
+  val entities = new entity.Manager
+  val messages = new message.Manager
+  var children: Set[Screen] = Set.empty
+  var view: Option[draw.View2D] = None
+  var prevKey: Option[Key.Value] = None
 
   val clock: java.util.TimerTask = new TimerTask { override def run(): Unit = tick() }
   def tick(): Unit = {
@@ -88,10 +35,12 @@ class World(val parent: Exp.Main) extends Component {
     val wsize = parent.windowSize
     val bottom = Cube(Pos(0, wsize.y - 100), wsize).toDoubles
     entities += new Block(entities.nextId, this, bottom, material.Bedrock)
+    view = Some(new draw.View2D(peer.getGraphicsConfiguration.getDevice, parent.windowSize))
   }
 
-  override def paint(g: Graphics2D): Unit = {
-    entities.all.foreach(_.draw(g))
+  override def paint(g: scala.swing.Graphics2D): Unit = {
+    val painter = new draw.Draw2D(g, view.get)
+    entities.all.foreach(_.draw(painter))
     /*val wsize = Cube(Pos(0,0), parent.windowSize)
     wsize.iteratorBy(20).iterator.foreach{p =>
       entities.findVolume(p).foreach{part =>
@@ -100,19 +49,22 @@ class World(val parent: Exp.Main) extends Component {
       }
     }*/
 
-    Tool.current.draw(g)
-    children.foreach(_.paint(g))
+    Tool.current.draw(painter)
+    children.foreach(_.draw(painter))
+    view.foreach{v =>
+      g.setColor(new Color(25, 25, 25))
+      g.drawLine(v.center.x - 10, v.center.y, v.center.x + 10, v.center.y)
+      g.drawLine(v.center.x, v.center.y - 10, v.center.x, v.center.y + 10)
+    }
   }
 
-  var children: Set[Component] = Set.empty
-
   abstract class Tool {
-    def draw(g: Graphics2D): Unit
-    def exit(pt: Pos[Int]): Unit = {}
-    def down(pt: Pos[Int]): Unit
-    def move(pt: Pos[Int]): Unit
-    def drag(pt: Pos[Int]): Unit
-    def up(pt: Pos[Int]): Unit
+    def draw(g: Draw2D): Unit
+    def exit(pt: Pos[Double]): Unit = {}
+    def down(pt: Pos[Double]): Unit
+    def move(pt: Pos[Double]): Unit
+    def drag(pt: Pos[Double]): Unit
+    def up(pt: Pos[Double]): Unit
   }
   object Tool {
     private val list: Array[Tool] = Array(Remover, Breaker, Creator)
@@ -122,78 +74,71 @@ class World(val parent: Exp.Main) extends Component {
   }
   case object Creator extends Tool {
     var pending: Option[Block] = None
-    def draw(g: Graphics2D): Unit = pending.foreach(_.draw(g))
-    def down(pt: Pos[Int]): Unit = {
-      val x = pt.toDoubles
-      pending = Some(new Block(entities.nextId, world, Cube(x, x), material.Test.random))
+    def draw(g: Draw2D): Unit = pending.foreach(_.draw(g))
+    def down(pt: Pos[Double]): Unit = {
+      pending = Some(new Block(entities.nextId, world, Cube(pt, pt), material.Test.random))
     }
-    def move(pt: Pos[Int]): Unit = {}
-    def drag(pt: Pos[Int]): Unit = if (pending.nonEmpty) {
+    def move(pt: Pos[Double]): Unit = {}
+    def drag(pt: Pos[Double]): Unit = if (pending.nonEmpty) {
       val p = pending.get.iterator.next()
-      val v = Cube(p.volume.l, (pt: Pos[Int]).toDoubles)
+      val v = Cube(p.volume.l, (pt: Pos[Double]).toDoubles)
       val c = entities.overlappingExcept(v.toDoubles, None)
       if (c.isEmpty)
         pending = Some(new Block(pending.get.id, world, v, p.material))
     }
-    def up(pt: Pos[Int]): Unit = if (pending.nonEmpty) {
+    def up(pt: Pos[Double]): Unit = if (pending.nonEmpty) {
       entities += pending.get
       pending = None
     }
   }
   case object Remover extends Tool {
     var hovered: Option[Entity] = None
-    def draw(g: Graphics2D): Unit = hovered.foreach{e =>
+    def draw(g: Draw2D): Unit = hovered.foreach{ e =>
       e.highlight(g, brighter = true)
-      e.above.foreach { a => a.highlight(g, brighter = false) }
+      // e.above.foreach{a => a.highlight(g, brighter = false) }
     }
-    def down(pt: Pos[Int]): Unit = { }
-    def move(pt: Pos[Int]): Unit = { hovered = world.entities.find(pt) }
-    def drag(pt: Pos[Int]): Unit = { }
-    def up(pt: Pos[Int]): Unit = if (hovered.nonEmpty) {
+    def down(pt: Pos[Double]): Unit = { }
+    def move(pt: Pos[Double]): Unit = { hovered = world.entities.find(pt) }
+    def drag(pt: Pos[Double]): Unit = { }
+    def up(pt: Pos[Double]): Unit = if (hovered.nonEmpty) {
       hovered.get.kill()
       hovered = None
     }
-    override def exit(pt: Pos[Int]): Unit = { hovered = None }
+    override def exit(pt: Pos[Double]): Unit = { hovered = None }
   }
   case object Breaker extends Tool {
-    var vol: Cube[Int] = Cube(Pos(0,0), Pos(0,0))
-    def draw(g: Graphics2D): Unit = {
-      g.setColor(new Color(255, 0, 0, 32))
-      g.fillRect(vol.min.x, vol.min.y, vol.shape.x, vol.shape.y)
-    }
-    def down(g: Pos[Int]): Unit = { }
-    def move(g: Pos[Int]): Unit = { vol = Cube(g - 20, g + 20) }
-    def drag(g: Pos[Int]): Unit = { }
-    def up(pt: Pos[Int]): Unit = {
-      val remove = vol.toDoubles
-      world.entities.overlappingExcept(vol.toDoubles, None).foreach(_.remove(remove))
+    private val color = new Color(255, 0, 0, 32)
+    def draw(g: Draw2D): Unit = g.window.fillRect(Cube(g.view.center - 20, g.view.center + 20), color)
+    def down(g: Pos[Double]): Unit = { }
+    def move(g: Pos[Double]): Unit = { }
+    def drag(g: Pos[Double]): Unit = { }
+    def up(pt: Pos[Double]): Unit = {
+      val rm = Cube(pt - 20, pt + 20)
+      world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
     }
   }
-
-  var prevKey: Option[Key.Value] = None
 
   reactions += {
     case KeyPressed(_, Key.Escape, _, _) => System.exit(0)
-    case KeyPressed(_, Key.L, _, _) => entities.all.foreach{e => println(e) }
+    case KeyPressed(_, Key.L, _, _) => entities.alive.foreach{e => println(e) }
     case KeyPressed(_, Key.T, _, _) => Tool.next()
+    case KeyPressed(_, Key.C, _, _) => view.foreach(_.recenter())
 
     // case KeyReleased(_, Key.Tab, _, _) if children.exists(_.isInstanceOf[window.Selection]) =>
 
     case KeyPressed(_, Key.B, _, _) =>
-      val debug = children.find(_.isInstanceOf[window.Debug])
-      children = if (debug.isEmpty) children + new window.Debug(this) else children - debug.get
+      val debug = children.find(_.isInstanceOf[screen.Debug])
+      children = if (debug.isEmpty) children + new screen.Debug(this) else children - debug.get
 
     case KeyReleased(_, key, mods, _) =>
       println("Other key pressed ")
       prevKey = Some(key)
-    // Remover.active = !Remover.active
-    // Breaker.active = !Breaker.active
 
-    case MousePressed(src, pt, keys, n, _)  => Tool.current.down(pt)
-    case MouseReleased(src, pt, keys, n, _) => Tool.current.up(pt)
-    case MouseDragged(src, pt, keys) => Tool.current.drag(pt)
-    case MouseMoved(_, pt, _)  => Tool.current.move(pt)
-    case MouseExited(_, pt, _) => Tool.current.exit(pt)
+    case MousePressed(src, pt, keys, n, _)  => view.map(_.move(pt).focus).foreach(Tool.current.down)
+    case MouseReleased(src, pt, keys, n, _) => view.map(_.move(pt).focus).foreach(Tool.current.up)
+    // case MouseExited(_, pt, _) => Tool.current.exit(pt)
+    case MouseDragged(src, pt, keys) => view.map(_.move(pt).focus).foreach(Tool.current.drag)
+    case MouseMoved(_, pt, _) => view.map(_.move(pt).focus).foreach(Tool.current.move)
   }
 }
 object World {

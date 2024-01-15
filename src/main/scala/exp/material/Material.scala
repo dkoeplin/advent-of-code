@@ -1,4 +1,4 @@
-package exp
+package exp.material
 
 import scala.swing.Color
 

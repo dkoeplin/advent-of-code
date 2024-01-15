@@ -1,8 +1,8 @@
 package exp.entity
 
 import common.immutable.Cube
-import exp.{Entity, Material, World}
-import exp.message
+import exp.World
+import exp.material.Material
 
 class Block(id: Int, world: World, vol: Cube[Double], mat: Material)
   extends Entity(id, world, Array(Part(vol, mat))) {
