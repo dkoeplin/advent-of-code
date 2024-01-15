@@ -10,7 +10,6 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   protected var parts: Array[Part] = vs
   def bbox: Cube[Double] = parts.iterator.map(_.volume).reduce(_ union _)
   def size: Double = parts.iterator.map(_.volume.size).sum
-
   def iterator: Iterator[Part] = parts.iterator
 
   def scale(n: Double): this.type = {
