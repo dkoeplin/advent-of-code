@@ -19,7 +19,7 @@ object Exp extends scala.swing.SimpleSwingApplication {
   println(s"Terminal: $terminalVelocity pixels/tick")
 
   class Main extends MainFrame {
-    title = s"Test"
+    title = s"EXP"
     background = new Color(0, 0, 0)
 
     protected val emptyCursor: java.awt.Cursor
