@@ -13,6 +13,6 @@ case class Part(volume: Cube[Double], material: Material) {
   def draw(g: Graphics2D): Unit = {
     val v = volume.roundInt
     g.setColor(material.color)
-    g.fill3DRect(v.min.x, v.min.y, v.shape.x, v.shape.y, true)
+    g.fillRect(v.min.x, v.min.y, v.shape.x, v.shape.y)
   }
 }

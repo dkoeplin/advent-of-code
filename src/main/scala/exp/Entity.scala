@@ -55,6 +55,12 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   def contains(rhs: Pos[Double]): Boolean = parts.exists(_.volume.contains(rhs))
   def at(rhs: Pos[Double]): Option[Part] = parts.find(_.volume.contains(rhs))
 
+  def remove(rhs: Cube[Double]): Unit = {
+    parts = parts.flatMap{case Part(volume, material) => (volume diff rhs).map{v => Part(v, material) }}
+    if (parts.isEmpty) die()
+    world.messages.broadcast(new message.Move(this), to=bordering())
+  }
+
   def updateVelocity(): Pos[Double] = Pos(velocity.iterator.zipWithIndex.map{case (v, dim) =>
     val p = if (v >= 0) bbox.max(dim) else bbox.min(dim)
     val mayAccel = World.isVertical(dim) && falls
