@@ -1,10 +1,9 @@
 package exp.entity
 
-import common.immutable.{Cube, Pos}
+import common.immutable.Cube
+import exp.World
 
 import scala.collection.immutable.ArraySeq
-
-import exp.World
 
 class Parts(parts: ArraySeq[Part]) {
   def this(parts: IterableOnce[Part]) = this(ArraySeq.from(parts))
@@ -12,6 +11,7 @@ class Parts(parts: ArraySeq[Part]) {
   def iterator: Iterator[Part] = parts.iterator
 
   // TODO: O(N^2): Memoize or figure out how to make faster
+  // TODO: Needs fixing
   private lazy val bordersAndDirs = ArraySeq.from(iterator.flatMap{part =>
     part.volume.dirsAndBorders(Entity.kUpdateRange).filterNot{case (_, b) =>
       iterator.exists{p => p != part && p.volume.overlaps(b) }
