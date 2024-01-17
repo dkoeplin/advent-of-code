@@ -5,18 +5,9 @@ import exp.draw.Draw2D
 import exp.message.Message
 import exp.{Exp, World, message}
 
-abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
-  protected var velocity: Pos[Double] = Pos(0, 0)
-  protected var parts: Array[Part] = vs
-  def size: Double = parts.iterator.map(_.volume.size).sum
-  def iterator: Iterator[Part] = parts.iterator
+import scala.collection.mutable
 
-  def scale(n: Double): Unit = parts = parts.map{p =>
-    val shape = p.volume.shape
-    val next = Cube(p.volume.min + shape*(0.5 - 0.5*n), p.volume.min + shape*(0.5 + 0.5*n))
-    Part(next, p.material)
-  }
-
+abstract class Entity(val id: Int, val world: World, _parts: Parts) {
   object State {
     val Awake = 0
     val Asleep = 1
@@ -24,18 +15,34 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
     val Dead = 3
   }
 
-  def falls: Boolean = !dying && parts.forall(_.material.falls)
+  protected var velocity: Pos[Double] = Pos(0, 0)
+  protected var parts: Parts = _parts
+  private var state: Int = State.Awake
+  private var death: Int = 0
 
-  def above: Iterator[Entity] = parts.iterator.flatMap{part =>
-    world.entities.overlappingExcept(part.volume.above(Entity.kUpdateRange), Some(this))
+  def iterator: Iterator[Part] = parts.iterator
+  def around: Iterator[Cube[Double]] = parts.around.iterator
+  def size: Double = iterator.map(_.volume.size).sum
+
+  def falls: Boolean = !dying && iterator.forall(_.material.falls)
+  def awake: Boolean = state == State.Awake
+  def asleep: Boolean = state == State.Asleep
+  def dying: Boolean = state == State.Dying
+  def dead: Boolean = state == State.Dead
+  def alive: Boolean = { state != State.Dying && state != State.Dead }
+  def immortal: Boolean = iterator.exists(_.material.immortal)
+
+  def receive(m: Message): Unit = {}
+  def break(groups: Iterator[Parts]): Iterator[Entity]
+
+  def scale(n: Double): Unit = parts = parts.map{p =>
+    val shape = p.volume.shape
+    val next = Cube(p.volume.min + shape*(0.5 - 0.5*n), p.volume.min + shape*(0.5 + 0.5*n))
+    Part(next, p.material)
   }
-  def bordering(width: Double = Entity.kUpdateRange): Iterator[Entity] = parts.iterator.flatMap{part =>
-    part.volume.borders(width).flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
-  }
-  // TODO: O(N^2): Memoize or figure out how to make faster
-  def borders(width: Double = 1): Iterator[Cube[Double]] = parts.iterator.flatMap{part =>
-    part.volume.borders(width).filterNot{b => parts.exists{p => p != part && p.volume.overlaps(b) }}
-  }
+
+  def above: Iterator[Entity] = parts.up.iterator.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
+  def bordering: Iterator[Entity] = parts.around.iterator.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
 
   override def hashCode(): Int = id.hashCode()
   override def equals(obj: Any): Boolean = obj match {
@@ -45,24 +52,29 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   def ==(rhs: Entity): Boolean = id == rhs.id
   def !=(rhs: Entity): Boolean = id != rhs.id
 
-  def draw(g: Draw2D): Unit = parts.foreach(_.draw(g))
+  def draw(g: Draw2D): Unit = iterator.foreach(_.draw(g))
 
-  def highlight(g: Draw2D, brighter: Boolean): Unit = parts.foreach{case Part(volume, material) =>
+  def highlight(g: Draw2D, brighter: Boolean): Unit = iterator.foreach{case Part(volume, material) =>
     g.fillRect(volume, if (brighter) material.color.brighter() else material.color.darker())
   }
 
-  def overlappingParts(rhs: Cube[Double]): Iterator[Part] = parts.iterator.filter(_.volume.overlaps(rhs))
-  def overlaps(rhs: Cube[Double]): Boolean = parts.exists(_.volume.overlaps(rhs))
-  def contains(rhs: Pos[Double]): Boolean = parts.exists(_.volume.contains(rhs))
-  def at(rhs: Pos[Double]): Option[Part] = parts.find(_.volume.contains(rhs))
+  def overlappingParts(rhs: Cube[Double]): Iterator[Part] = iterator.filter(_.volume.overlaps(rhs))
+  def overlaps(rhs: Cube[Double]): Boolean = iterator.exists(_.volume.overlaps(rhs))
+  def contains(rhs: Pos[Double]): Boolean = iterator.exists(_.volume.contains(rhs))
+  def at(rhs: Pos[Double]): Option[Part] = iterator.find(_.volume.contains(rhs))
 
   def remove(rhs: Cube[Double]): Unit = if (alive) {
-    val nearby = bordering() // Get the nearby entities _before_ we remove the piece
+    val nearby = bordering // Get the nearby entities _before_ we remove the piece
     parts = parts.flatMap{case Part(volume, material) => (volume diff rhs).map{v => Part(v, material) }}
-    if (parts.isEmpty) {
+    if (iterator.isEmpty) {
       die()
       world.messages.broadcast(new message.Removed(this), nearby)
     } else {
+      val (groups, n) = Entity.group(iterator)
+      if (n > 1) {
+        die()
+        world.entities ++= break(groups.iterator)
+      }
       world.messages.broadcast(new message.Move(this), nearby) // todo: changed, not move
     }
   }
@@ -70,7 +82,7 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   def updateVelocity(): Pos[Double] = Pos(velocity.iterator.zipWithIndex.map{case (v, dim) =>
     val mayAccel = World.isVertical(dim) && falls
     val reduce = {(a: Double, b: Double) => if (v > 0) Math.min(a,b) else Math.max(a,b)}
-    if (parts.isEmpty || (v == 0 && !mayAccel)) 0.0 else parts.iterator.map{part =>
+    if (iterator.isEmpty || (v == 0 && !mayAccel)) 0.0 else iterator.map{part =>
       val p = if (v >= 0) part.volume.max(dim) else part.volume.min(dim)
       val b = part.volume.alter(dim, p, p + v) // travel range in this tick
       world.entities.overlappingPartsExcept(b, Some(this)) match {
@@ -101,14 +113,6 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
     }
   }
 
-  def awake: Boolean = state == State.Awake
-  def asleep: Boolean = state == State.Asleep
-  def dying: Boolean = state == State.Dying
-  def dead: Boolean = state == State.Dead
-  def alive: Boolean = { state != State.Dying && state != State.Dead }
-  def immortal: Boolean = parts.exists(_.material.immortal)
-
-  def receive(m: Message): Unit = {}
   final def receiveAll(): Unit = {
     var m: Option[Message] = world.messages.get(this)
     while (m.nonEmpty) {
@@ -124,7 +128,7 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
   final def kill(): Unit = if (!immortal) {
     state = State.Dying
     world.entities.notifyAwake(this)
-    world.messages.broadcast(new message.Removed(this), to=bordering())
+    world.messages.broadcast(new message.Removed(this), to=bordering)
   }
   final def wake(): Unit = {
     state = State.Awake
@@ -134,11 +138,39 @@ abstract class Entity(val id: Int, val world: World, vs: Array[Part]) {
     state = State.Asleep
     world.entities.notifySleep(this)
   }
-  final private var state: Int = State.Awake
-  final private var death: Int = 0
 }
 object Entity {
+  class Groups {
+    def add(parts: IterableOnce[Part]): Unit = parts.iterator.foreach(add)
+    def add(part: Part): Unit = {
+      val sets = mutable.HashSet.empty[Int]
+      val parts = mutable.ArrayBuffer[Part](part)
+      groups.foreach{case (idx, group) =>
+        if (group.around.exists(_.overlaps(part.volume))) {
+          sets += idx
+          parts ++= group.iterator
+        }
+      }
+      parts.foreach{part => lookup(part) = count }
+      groups(count) = new Parts(parts)
+      groups.subtractAll(sets)
+      count += 1
+    }
+    def iterator: Iterator[Parts] = groups.valuesIterator
+    def size: Int = groups.size
+
+    private var count: Int = 0
+    private val groups: mutable.HashMap[Int, Parts] = mutable.HashMap.empty
+    private val lookup: mutable.HashMap[Part, Int] = mutable.HashMap.empty
+  }
+
+  def group(parts: Iterator[Part]): (Iterator[Parts], Int) = {
+    val groups = new Groups
+    groups.add(parts)
+    (groups.iterator, groups.size)
+  }
+
   val kDeathRate: Double = 0.9 // Shrink factor per tick while dying
   val kDeathTime: Int = 40     // Number of ticks to spend in the "dying" animation
-  val kUpdateRange: Int = 5    // Number of pixels range to update on change by default
+  val kUpdateRange: Int = 2    // Number of pixels range to update on change by default
 }

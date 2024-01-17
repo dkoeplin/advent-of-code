@@ -35,7 +35,7 @@ class World(val parent: Exp.Main) extends Component {
     val wsize = parent.windowSize
     val bottom = Cube(Pos(0, wsize.y - 100), wsize).toDoubles
     entities += new Block(entities.nextId, this, bottom, material.Bedrock)
-    view = Some(new draw.View2D(peer.getGraphicsConfiguration.getDevice, parent.windowSize))
+    view = Some(new draw.View2D(this))
   }
 
   override def paint(g: scala.swing.Graphics2D): Unit = {
@@ -109,13 +109,16 @@ class World(val parent: Exp.Main) extends Component {
   case object Breaker extends Tool {
     private val color = new Color(255, 0, 0, 32)
     def draw(g: Draw2D): Unit = g.window.fillRect(Cube(g.view.center - 20, g.view.center + 20), color)
-    def down(g: Pos[Double]): Unit = { }
-    def move(g: Pos[Double]): Unit = { }
-    def drag(g: Pos[Double]): Unit = { }
-    def up(pt: Pos[Double]): Unit = {
+    def down(pt: Pos[Double]): Unit = {
       val rm = Cube(pt - 20, pt + 20)
       world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
     }
+    def move(pt: Pos[Double]): Unit = { }
+    def drag(pt: Pos[Double]): Unit = {
+      val rm = Cube(pt - 20, pt + 20)
+      world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
+    }
+    def up(pt: Pos[Double]): Unit = { }
   }
 
   reactions += {

@@ -2,7 +2,7 @@ package exp
 
 import common.immutable.Pos
 
-import java.awt.GraphicsEnvironment
+import java.awt.{GraphicsEnvironment, MouseInfo, Robot}
 import java.util.TimerTask
 import scala.swing.{Color, Frame, MainFrame}
 
