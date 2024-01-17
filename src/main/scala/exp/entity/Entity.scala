@@ -151,9 +151,9 @@ object Entity {
           parts ++= group.iterator
         }
       }
-      parts.foreach{part => lookup(part) = count }
       groups(count) = new Parts(parts)
       groups.subtractAll(sets)
+      parts.foreach{part => lookup(part) = count }
       count += 1
     }
     def iterator: Iterator[Parts] = groups.valuesIterator
