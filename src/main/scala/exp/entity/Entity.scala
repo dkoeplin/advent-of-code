@@ -146,7 +146,7 @@ object Entity {
       val sets = mutable.HashSet.empty[Int]
       val parts = mutable.ArrayBuffer[Part](part)
       groups.foreach{case (idx, group) =>
-        if (group.around.exists(_.overlaps(part.volume))) {
+        if (group.iterator.exists(_.volume.borders(Entity.kUpdateRange).exists(_.overlaps(part.volume)))) {
           sets += idx
           parts ++= group.iterator
         }
