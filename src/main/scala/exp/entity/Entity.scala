@@ -70,8 +70,8 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
       die()
       world.messages.broadcast(new message.Removed(this), nearby)
     } else {
-      val (groups, n) = Entity.group(iterator)
-      if (n > 1) {
+      val groups = Entity.group(iterator)
+      if (groups.size > 1) {
         die()
         world.entities ++= break(groups.iterator)
       }
@@ -140,9 +140,12 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
   }
 }
 object Entity {
-  class Groups {
-    def add(parts: IterableOnce[Part]): Unit = parts.iterator.foreach(add)
-    def add(part: Part): Unit = {
+  def group(parts: Iterator[Part]): Iterable[Parts] = {
+    var count: Int = 0
+    val groups: mutable.HashMap[Int, Parts] = mutable.HashMap.empty
+    val lookup: mutable.HashMap[Part, Int] = mutable.HashMap.empty
+
+    parts.foreach{part =>
       val sets = mutable.HashSet.empty[Int]
       val parts = mutable.ArrayBuffer[Part](part)
       groups.foreach{case (idx, group) =>
@@ -157,19 +160,7 @@ object Entity {
       parts.foreach{part => lookup(part) = count }
       count += 1
     }
-    def iterator: Iterator[Parts] = groups.valuesIterator
-    def size: Int = groups.size
-
-    private var count: Int = 0
-    private val groups: mutable.HashMap[Int, Parts] = mutable.HashMap.empty
-    private val lookup: mutable.HashMap[Part, Int] = mutable.HashMap.empty
-  }
-
-  def group(parts: Iterator[Part]): (Iterator[Parts], Int) = {
-    val groups = new Groups
-    groups.add(parts)
-    println(s"Break resulted in ${groups.size} partitions")
-    (groups.iterator, groups.size)
+    groups.values
   }
 
   val kDeathRate: Double = 0.9 // Shrink factor per tick while dying
