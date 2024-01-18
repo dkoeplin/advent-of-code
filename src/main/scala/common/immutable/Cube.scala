@@ -73,18 +73,18 @@ class Cube[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vo
 
   def t: Cube[T] = Cube(min.t, max.t)
 
-  def edges: Iterator[Cube[T]] = (0 until rank).flatMap{ dim =>
-    Seq(alter(dim, min(dim), min(dim)), alter(dim, max(dim), max(dim)))
-  }.toSet.iterator
+  /// Returns an iterator over the edges of this volume.
+  /// Edges are inside the volume itself, up to a depth of `width` from each side.
+  def edges(width: T): Iterator[Border[T]] = borders(-width, num.zero)
 
-  def borders(implicit int: Integral[T]): Iterator[Cube[T]] = borders(int.one)
-  def borders(width: T)(implicit num: Numeric[T]): Iterator[Cube[T]] = dirsAndBorders(width).map(_._2)
-
-  def dirsAndBorders(width: T)(implicit num: Numeric[T]): Iterator[(Pos[T], Cube[T])]
+  def borders(): Iterator[Border[T]] = borders(num.one, num.one)
+  def borders(width: T, dist: T): Iterator[Border[T]]
     = (0 until rank).iterator.flatMap { dim =>
       val dir = Pos.unit[T](rank, dim)
-      val delta = dir * width
-      Iterator((-dir, Cube(min - delta, max.alter(dim, min(dim)))), (dir, Cube(min.alter(dim, max(dim)), max + delta)))
+      val inner = dir * dist
+      val outer = dir * (width + dist)
+      Iterator(Border(dim, -dir, Cube(min - outer, max.alter(dim, min(dim))) - inner),
+               Border(dim, dir, Cube(min.alter(dim, max(dim)) + inner, max + outer)))
     }
 
   def above(width: T = implicitly[Numeric[T]].one, delta: T = implicitly[Numeric[T]].one): Cube[T]

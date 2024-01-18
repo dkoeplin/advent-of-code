@@ -1,7 +1,6 @@
 package exp.draw
 
 import common.immutable.{Cube, Pos}
-
 import exp.World
 
 class View2D(world: World) {
@@ -31,7 +30,7 @@ class View2D(world: World) {
 
   var delay: Int = 0
   def move(pt: Pos[Int]): this.type = {
-    if (delay < 10) { delay += 1; prev = pt } else {
+    if (delay < 1000) { delay += 1; prev = pt } else {
       val delta = (pt - center).toDoubles
       _focus = _focus + delta
       _view = _view + delta

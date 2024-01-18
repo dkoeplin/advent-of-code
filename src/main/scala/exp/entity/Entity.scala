@@ -21,7 +21,7 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
   private var death: Int = 0
 
   def iterator: Iterator[Part] = parts.iterator
-  def around: Iterator[Cube[Double]] = parts.around.iterator
+  def borders: Iterator[Cube[Double]] = parts.borders.all
   def size: Double = iterator.map(_.volume.size).sum
 
   def falls: Boolean = !dying && iterator.forall(_.material.falls)
@@ -41,8 +41,8 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
     Part(next, p.material)
   }
 
-  def above: Iterator[Entity] = parts.up.iterator.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
-  def bordering: Iterator[Entity] = parts.around.iterator.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
+  def above: Iterator[Entity] = parts.borders.up.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
+  def bordering: Iterator[Entity] = parts.borders.all.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
 
   override def hashCode(): Int = id.hashCode()
   override def equals(obj: Any): Boolean = obj match {
@@ -146,7 +146,8 @@ object Entity {
       val sets = mutable.HashSet.empty[Int]
       val parts = mutable.ArrayBuffer[Part](part)
       groups.foreach{case (idx, group) =>
-        if (group.iterator.exists(_.volume.borders(Entity.kUpdateRange).exists(_.overlaps(part.volume)))) {
+        if (group.borders.all.exists{border =>
+          border.overlaps(part.volume) }) {
           sets += idx
           parts ++= group.iterator
         }
@@ -167,6 +168,7 @@ object Entity {
   def group(parts: Iterator[Part]): (Iterator[Parts], Int) = {
     val groups = new Groups
     groups.add(parts)
+    println(s"Break resulted in ${groups.size} partitions")
     (groups.iterator, groups.size)
   }
 

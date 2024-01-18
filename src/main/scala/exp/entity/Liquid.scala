@@ -1,6 +1,6 @@
 package exp.entity
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Border, Cube, Pos}
 import exp.World
 
 import scala.collection.immutable.ArraySeq
@@ -28,7 +28,7 @@ class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts
     }
   }
   // private var neighbors: List[Neighbor] = Nil
-  private def neighbors: List[Neighbor] = bordersExceptUp(material.tension).map{case (dir, border) =>
+  private def neighbors: List[Neighbor] = parts.borders.notUp.map{case Border(_, dir, border) =>
     val (x, y) = world.entities.overlappingExcept(border, Some(this)).duplicate
 
     val empty = x.foldLeft(List(border)){(remain,e) => remain.flatMap(_.diff(e.iterator.map(_.volume))) }
@@ -54,7 +54,4 @@ class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts
   override def break(groups: Iterator[Parts]): Iterator[Entity] = groups.map{group =>
     new Liquid(world.entities.nextId, world, group)
   }
-
-  private def bordersExceptUp(width: Double): Iterator[(Pos[Double],Cube[Double])]
-    = iterator.map(_.volume).flatMap(_.dirsAndBorders(width).filterNot(_._1.y < 0))
 }
