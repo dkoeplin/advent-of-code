@@ -3,7 +3,7 @@ package exp.entity
 import common.immutable.{Cube, Pos}
 import exp.draw.Draw2D
 import exp.message.Message
-import exp.{Exp, World, message}
+import exp.{World, message}
 
 import scala.collection.mutable
 
@@ -15,14 +15,16 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
     val Dead = 3
   }
 
-  protected var velocity: Pos[Double] = Pos(0, 0)
   protected var parts: Parts = _parts
   private var state: Int = State.Awake
   private var death: Int = 0
 
+  protected var velocity: Pos[Long] = Pos.zero[Long](2)
+  protected var accel: Pos[Long] = Pos(0, if (falls) world.gravity else 0)
+
   def iterator: Iterator[Part] = parts.iterator
-  def borders: Iterator[Cube[Double]] = parts.borders.all
-  def size: Double = iterator.map(_.volume.size).sum
+  def borders: Iterator[Cube[Long]] = parts.borders.all
+  def size: Long = iterator.map(_.volume.size).sum
 
   def falls: Boolean = !dying && iterator.forall(_.material.falls)
   def awake: Boolean = state == State.Awake
@@ -32,13 +34,14 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
   def alive: Boolean = { state != State.Dying && state != State.Dead }
   def immortal: Boolean = iterator.exists(_.material.immortal)
 
-  def receive(m: Message): Unit = {}
   def break(groups: Iterator[Parts]): Iterator[Entity]
 
-  def scale(n: Double): Unit = parts = parts.map{p =>
-    val shape = p.volume.shape
-    val next = Cube(p.volume.min + shape*(0.5 - 0.5*n), p.volume.min + shape*(0.5 + 0.5*n))
-    Part(next, p.material)
+  def scale(n: Long): Unit = parts = parts.map{part =>
+    val shape = part.volume.shape
+    val middle = part.volume.min + shape/2
+    val scaled = shape/(2*n)
+    val next = Cube(middle - scaled, middle + scaled)
+    Part(next, part.material)
   }
 
   def above: Iterator[Entity] = parts.borders.up.flatMap{b => world.entities.overlappingExcept(b, Some(this)) }
@@ -58,50 +61,50 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
     g.fillRect(volume, if (brighter) material.color.brighter() else material.color.darker())
   }
 
-  def overlappingParts(rhs: Cube[Double]): Iterator[Part] = iterator.filter(_.volume.overlaps(rhs))
-  def overlaps(rhs: Cube[Double]): Boolean = iterator.exists(_.volume.overlaps(rhs))
-  def contains(rhs: Pos[Double]): Boolean = iterator.exists(_.volume.contains(rhs))
-  def at(rhs: Pos[Double]): Option[Part] = iterator.find(_.volume.contains(rhs))
+  def overlappingParts(rhs: Cube[Long]): Iterator[Part] = iterator.filter(_.volume.overlaps(rhs))
+  def overlaps(rhs: Cube[Long]): Boolean = iterator.exists(_.volume.overlaps(rhs))
+  def contains(rhs: Pos[Long]): Boolean = iterator.exists(_.volume.contains(rhs))
+  def at(rhs: Pos[Long]): Option[Part] = iterator.find(_.volume.contains(rhs))
 
-  def remove(rhs: Cube[Double]): Unit = if (alive) {
-    val nearby = bordering // Get the nearby entities _before_ we remove the piece
-    parts = parts.flatMap{case Part(volume, material) => (volume diff rhs).map{v => Part(v, material) }}
-    if (iterator.isEmpty) {
+  def remove(rhs: Cube[Long]): Unit = if (alive) {
+    val neighbors = mutable.ArrayBuffer.empty[Entity]
+    val remaining = mutable.ArrayBuffer.empty[Part]
+    var changed: Boolean = false
+    parts.foreach{part =>
+      if (part.volume.overlaps(rhs)) {
+        changed = true
+        neighbors ++= world.entities.overlappingExcept(Cube(part.volume.min - 1, part.volume.max + 1), Some(this))
+        remaining ++= (part diff rhs)
+      } else {
+        remaining += part
+      }
+    }
+    if (remaining.isEmpty) {
       die()
-      world.messages.broadcast(new message.Removed(this), nearby)
+      world.messages.broadcast(new message.Removed(this), neighbors)
     } else {
-      val groups = Entity.group(iterator)
+      val groups = Entity.group(remaining.iterator)
       if (groups.size > 1) {
         die()
-        world.entities ++= break(groups.iterator)
+        val broken = break(groups.iterator).toArray
+        world.entities ++= broken
+        broken.foreach{e => world.messages.send(new message.Move(e), e) }
+      } else if (changed) {
+        // Need to send message to self to wake up?
+        parts = new Parts(remaining)
+        world.messages.send(new message.Move(this), this) // todo: broken, not move
       }
-      world.messages.broadcast(new message.Move(this), nearby) // todo: changed, not move
+      if (changed) {
+        world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
+      }
     }
   }
 
-  def updateVelocity(): Pos[Double] = Pos(velocity.iterator.zipWithIndex.map{case (v, dim) =>
-    val mayAccel = World.isVertical(dim) && falls
-    val reduce = {(a: Double, b: Double) => if (v > 0) Math.min(a,b) else Math.max(a,b)}
-    if (iterator.isEmpty || (v == 0 && !mayAccel)) 0.0 else iterator.map{part =>
-      val p = if (v >= 0) part.volume.max(dim) else part.volume.min(dim)
-      val b = part.volume.alter(dim, p, p + v) // travel range in this tick
-      world.entities.overlappingPartsExcept(b, Some(this)) match {
-        case others if others.nonEmpty =>
-          val top = if (v >= 0) others.minBy(_.volume.min(dim)) else others.maxBy(_.volume.max(dim))
-          val bound = if (v >= 0) top.volume.min(dim) else top.volume.max(dim)
-          bound - p
-        case _ if World.isVertical(dim) && falls =>
-          Math.min(Exp.terminalVelocity, v + Exp.gravity)
-        case _ => v
-      }
-    }.reduce(reduce)
-  })
-
   def tick(): Unit = {
     val initialVelocity = velocity
-    velocity = updateVelocity()
-    parts = parts.map(_ + velocity)
+    velocity = Entity.updateVelocity(world, this)
 
+    // Check for and notify neighbors before moving
     if (dying) {
       death += 1
       scale(Entity.kDeathRate)
@@ -111,17 +114,14 @@ abstract class Entity(val id: Int, val world: World, _parts: Parts) {
     } else if (initialVelocity.magnitude == 0) {
       world.messages.broadcast(new message.Move(this), to=above)
     }
+
+    parts = parts.map(_ + velocity)
   }
 
-  final def receiveAll(): Unit = {
-    var m: Option[Message] = world.messages.get(this)
-    while (m.nonEmpty) {
-      receive(m.get)
-      m = world.messages.get(this)
-    }
-  }
+  protected def receive(m: Message): Unit = {}
+  final protected def receiveAll(): Unit = world.messages.get(this).foreach(receive)
 
-  final def die(): Unit = {
+  final protected def die(): Unit = {
     state = State.Dead
     world.entities.notifyDead(this)
   }
@@ -163,7 +163,25 @@ object Entity {
     groups.values
   }
 
-  val kDeathRate: Double = 0.9 // Shrink factor per tick while dying
+  def updateVelocity(world: World, entity: Entity): Pos[Long] = {
+    Pos(entity.velocity.iterator.zip(entity.accel.iterator).zipWithIndex.map{case ((vInit, a), dim) =>
+      val reduce = {(a: Long, b: Long) => if (vInit >= 0) Math.min(a,b) else Math.max(a,b) }
+      if (entity.iterator.isEmpty || (vInit == 0 && a == 0)) 0 else entity.iterator.map{part =>
+        val current = if (vInit >= 0) part.volume.max(dim) else part.volume.min(dim)
+        val v = Math.min(world.terminal, vInit + a)
+        val trajectory = part.volume.alter(dim, current, current + v) // travel range in this tick
+        world.entities.overlappingPartsExcept(trajectory, Some(entity)) match {
+          case others if others.nonEmpty =>
+            val top = if (v >= 0) others.minBy(_.volume.min(dim)) else others.maxBy(_.volume.max(dim))
+            val bound = if (v >= 0) top.volume.min(dim) - 1 else top.volume.max(dim) + 1
+            bound - current
+          case _ => v
+        }
+      }.reduce(reduce)
+    })
+  }
+
+  val kDeathRate: Long = 2     // Shrink factor per tick while dying
   val kDeathTime: Int = 40     // Number of ticks to spend in the "dying" animation
   val kUpdateRange: Int = 2    // Number of pixels range to update on change by default
 }

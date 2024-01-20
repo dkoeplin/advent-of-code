@@ -25,7 +25,7 @@ object Day18 extends common.AoC(18, 2023) {
     while (frontier.nonEmpty) {
       val current = frontier.head
       frontier = frontier.tail
-      val diff = current diff lagoon.dug
+      val diff = (current diff lagoon.dug).toArray
       if (diff.nonEmpty) {
         val next = lagoon.expanded(diff.head)
         frontier = frontier ++ diff.tail

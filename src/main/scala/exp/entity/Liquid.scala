@@ -6,13 +6,13 @@ import exp.World
 import scala.collection.immutable.ArraySeq
 
 class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts) {
-  def this(id: Int, world: World, vol: Cube[Double], mat: exp.material.Liquid) = this(id, world, new Parts(ArraySeq(Part(vol, mat))))
+  def this(id: Int, world: World, vol: Cube[Long], mat: exp.material.Liquid) = this(id, world, new Parts(ArraySeq(Part(vol, mat))))
   override val material: exp.material.Liquid = iterator.next().material.asInstanceOf[exp.material.Liquid] // FIXME
   override def falls: Boolean = material.falls
 
-  case class Neighbor(v: Either[Cube[Double], Liquid], dir: Pos[Double]) {
-    def size: Double = v match {case Left(c) => c.size; case Right(l) => l.size }
-    def spread(scale: Double): Unit = {
+  case class Neighbor(v: Either[Cube[Long], Liquid], dir: Pos[Long]) {
+    def size: Long = v match {case Left(c) => c.size; case Right(l) => l.size }
+    def spread(scale: Long): Unit = {
       v match {
         case Left(cube) if World.isVertical(dir) =>
           val scaling = Pos(dir.iterator.map{case 1 => scale; case _ => 1 })

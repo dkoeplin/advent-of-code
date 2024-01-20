@@ -35,7 +35,7 @@ class Cube[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vo
 
   def overlaps(rhs: Cube[T]): Boolean
     = zipped(min.iterator, max.iterator, rhs.min.iterator, rhs.max.iterator)
-    .forall{case Seq(amin, amax, bmin, bmax) => bmin <= amax && bmax >= amin }
+    .forall{case Seq(aMin, aMax, bMin, bMax) => bMin <= aMax && bMax >= aMin }
 
   def iterator(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = false, int.one)
   def reverseIterator(implicit int: Integral[T]): Iterator[Pos[T]] = Cube.anyIterator(this, reverse = true, int.one)
@@ -93,25 +93,26 @@ class Cube[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vo
   def intersect(rhs: Cube[T]): Option[Cube[T]]
     = if (!overlaps(rhs)) None else Some(Cube(min max rhs.min, max min rhs.max))
 
-  def diff(rhs: Cube[T]): Set[Cube[T]] = intersect(rhs) match {
+  def diff(rhs: Cube[T]): Iterator[Cube[T]] = intersect(rhs) match {
     case Some(union) =>
       val one = implicitly[Numeric[T]].one
-      Cube.deltas(rank).flatMap{ delta =>
+      Cube.deltas(rank).flatMap{delta =>
         val (x: Iterator[(T,T)], y: Iterator[(T,T)]) = delta.iterator.zipWithIndex.map{
           case (-1, d) => (min(d), union.min(d) - one)
           case (0, d)  => (union.min(d), union.max(d))
           case (1, d)  => (union.max(d) + one, max(d))
         }.duplicate
         Cube.get(Pos(x.map(_._1)), Pos(y.map(_._2)))
-      }.toSet
-    case None => Set(this)
+      }
+    case None => Iterator(this)
   }
 
-  def diff(rhs: IterableOnce[Cube[T]]): Set[Cube[T]]
-    = rhs.iterator.foldLeft(Set(this)){(set, v) => set.flatMap(_ diff v) }
+  def diff(rhs: IterableOnce[Cube[T]]): Iterator[Cube[T]]
+    = rhs.iterator.foldLeft(Iterator(this)){(set, v) => set.flatMap(_ diff v) }
 
   def toDoubles: Cube[Double] = Cube(min.toDoubles, max.toDoubles)
   def toInts: Cube[Int] = Cube(min.toInts, max.toInts)
+  def toLongs: Cube[Long] = Cube(min.toLongs, max.toLongs)
 
   override def toString: String = s"($min to $max)"
 }
@@ -127,11 +128,11 @@ object Cube {
     }.map(_.iterator).map{seq => Pos[T](seq) }
   }
 
+  private def deltas(rank: Int): Iterator[Pos[Int]]
+    = Cube(Pos.fill(rank, -1), Pos.fill(rank, 1)).iterator.filterNot(_.iterator.forall(_ == 0))
+
   def unit[T:Numeric](at: Pos[T]): Cube[T] = new Cube(at, at)
   def apply[T:Numeric](p0: Pos[T], p1: Pos[T]): Cube[T] = new Cube(p0, p1)
-
-  def deltas(rank: Int): Iterator[Pos[Int]]
-    = Cube(Pos.fill(rank, -1), Pos.fill(rank, 1)).iterator.filterNot(_.iterator.forall(_ == 0))
 
   def get[T](min: Pos[T], max: Pos[T])(implicit num: Numeric[T]): Option[Cube[T]] = {
     if (min.iterator.zip(max.iterator).forall{case (a, b) => a <= b }) Some(Cube(min, max)) else None

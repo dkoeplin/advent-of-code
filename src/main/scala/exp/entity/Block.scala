@@ -7,7 +7,7 @@ import exp.material.Material
 import scala.collection.immutable.ArraySeq
 
 class Block(id: Int, world: World, parts: Parts) extends Entity(id, world, parts) {
-  def this(id: Int, world: World, vol: Cube[Double], mat: Material) = this(id, world, new Parts(ArraySeq(Part(vol, mat))))
+  def this(id: Int, world: World, vol: Cube[Long], mat: Material) = this(id, world, new Parts(ArraySeq(Part(vol, mat))))
   val material: Material = parts.iterator.next().material
   override def toString: String = s"Block(#$id)"
 

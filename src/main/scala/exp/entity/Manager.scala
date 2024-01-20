@@ -29,21 +29,15 @@ class Manager {
   }
 
   // TODO: Limit this somehow
-  def nearby(x: Cube[Double]): Iterator[Entity] = alive.iterator
+  def nearbyExcept(x: Cube[Long], target: Option[Entity]): Iterator[Entity] = alive.iterator.filterNot(target.contains)
 
-  def find(x: Pos[Double]): Option[Entity] = {
-    nearby(Cube(x,x)).find{e => e.contains(x) && e.alive }
-  }
-  def findVolume(x: Pos[Int]): Option[Part] = {
-    val p = x.toDoubles
-    nearby(Cube(p,p)).iterator.find(_.contains(p)).flatMap(_.at(p))
-  }
+  def find(x: Pos[Long]): Option[Entity] = nearbyExcept(Cube(x,x), None).find{e => e.contains(x) && e.alive }
 
-  def overlappingExcept(volume: Cube[Double], target: Option[Entity]): Iterator[Entity] = {
-    nearby(volume).filter{e => !target.contains(e) && e.overlaps(volume) && e.alive }
+  def overlappingExcept(volume: Cube[Long], target: Option[Entity]): Iterator[Entity] = {
+    nearbyExcept(volume, target).filter{e => e.overlaps(volume) && e.alive }
   }
-  def overlappingPartsExcept(volume: Cube[Double], target: Option[Entity]): Iterator[Part] = {
-    nearby(volume).filter{e => !target.contains(e) }.flatMap{e => e.overlappingParts(volume) }
+  def overlappingPartsExcept(volume: Cube[Long], target: Option[Entity]): Iterator[Part] = {
+    nearbyExcept(volume, target).flatMap{e => e.overlappingParts(volume) }
   }
 
   def notifyAwake(e: Entity): Unit = { awakeEntities += e }

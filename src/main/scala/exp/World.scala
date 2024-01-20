@@ -19,9 +19,12 @@ class World(val parent: Exp.Main) extends Component {
 
   val entities = new entity.Manager
   val messages = new message.Manager
-  var children: Set[Screen] = Set.empty
+  private var children: Set[Screen] = Set.empty
   var view: Option[draw.View2D] = None
   var prevKey: Option[Key.Value] = None
+
+  def gravity: Long = 3       // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
+  def terminal: Long = 1500   // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
 
   val clock: java.util.TimerTask = new TimerTask { override def run(): Unit = tick() }
   def tick(): Unit = {
@@ -32,8 +35,8 @@ class World(val parent: Exp.Main) extends Component {
   }
 
   def load(): Unit = {
-    val wsize = parent.windowSize
-    val bottom = Cube(Pos(0, wsize.y - 100), wsize).toDoubles
+    val windowSize = parent.windowSize
+    val bottom = Cube(Pos(0, windowSize.y - 100), windowSize).toLongs
     entities += new Block(entities.nextId, this, bottom, material.Bedrock)
     view = Some(new draw.View2D(this))
   }
@@ -41,8 +44,8 @@ class World(val parent: Exp.Main) extends Component {
   override def paint(g: scala.swing.Graphics2D): Unit = {
     val painter = new draw.Draw2D(g, view.get)
     entities.all.foreach(_.draw(painter))
-    /*val wsize = Cube(Pos(0,0), parent.windowSize)
-    wsize.iteratorBy(20).iterator.foreach{p =>
+    /*val windowSize = Cube(Pos(0,0), parent.windowSize)
+    windowSize.iteratorBy(20).iterator.foreach{p =>
       entities.findVolume(p).foreach{part =>
         g.setColor(part.material.color)
         g.fillRect(p.x, p.y, 20, 20)
@@ -60,65 +63,73 @@ class World(val parent: Exp.Main) extends Component {
 
   abstract class Tool {
     def draw(g: Draw2D): Unit
-    def exit(pt: Pos[Double]): Unit = {}
-    def down(pt: Pos[Double]): Unit
-    def move(pt: Pos[Double]): Unit
-    def drag(pt: Pos[Double]): Unit
-    def up(pt: Pos[Double]): Unit
+    def exit(pt: Pos[Long]): Unit = {}
+    def down(pt: Pos[Long]): Unit
+    def move(pt: Pos[Long]): Unit
+    def drag(pt: Pos[Long]): Unit
+    def up(pt: Pos[Long]): Unit
   }
   object Tool {
-    private val list: Array[Tool] = Array(Remover, Breaker, Creator)
+    private val list: Array[Tool] = Array(Debug, Creator, Remover, Breaker)
     private var index: Int = 0
     def next(): Unit = { index = (index + 1) % list.length }
     def current: Tool = list(index)
   }
   case object Creator extends Tool {
-    var pending: Option[Block] = None
+    private var pending: Option[Block] = None
     def draw(g: Draw2D): Unit = pending.foreach(_.draw(g))
-    def down(pt: Pos[Double]): Unit = {
+    def down(pt: Pos[Long]): Unit = {
       pending = Some(new Block(entities.nextId, world, Cube(pt, pt), material.Test.random))
     }
-    def move(pt: Pos[Double]): Unit = {}
-    def drag(pt: Pos[Double]): Unit = if (pending.nonEmpty) {
+    def move(pt: Pos[Long]): Unit = {}
+    def drag(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
       val p = pending.get.iterator.next()
-      val v = Cube(p.volume.l, (pt: Pos[Double]).toDoubles)
-      val c = entities.overlappingExcept(v.toDoubles, None)
+      val v = Cube(p.volume.l, pt)
+      val c = entities.overlappingExcept(v.toLongs, None)
       if (c.isEmpty)
         pending = Some(new Block(pending.get.id, world, v, p.material))
     }
-    def up(pt: Pos[Double]): Unit = if (pending.nonEmpty) {
+    def up(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
       entities += pending.get
       pending = None
     }
   }
   case object Remover extends Tool {
-    var hovered: Option[Entity] = None
+    private var hovered: Option[Entity] = None
     def draw(g: Draw2D): Unit = hovered.foreach{ e =>
       e.highlight(g, brighter = true)
       // e.above.foreach{a => a.highlight(g, brighter = false) }
     }
-    def down(pt: Pos[Double]): Unit = { }
-    def move(pt: Pos[Double]): Unit = { hovered = world.entities.find(pt) }
-    def drag(pt: Pos[Double]): Unit = { }
-    def up(pt: Pos[Double]): Unit = if (hovered.nonEmpty) {
+    def down(pt: Pos[Long]): Unit = { }
+    def move(pt: Pos[Long]): Unit = { hovered = world.entities.find(pt) }
+    def drag(pt: Pos[Long]): Unit = { }
+    def up(pt: Pos[Long]): Unit = if (hovered.nonEmpty) {
       hovered.get.kill()
       hovered = None
     }
-    override def exit(pt: Pos[Double]): Unit = { hovered = None }
+    override def exit(pt: Pos[Long]): Unit = { hovered = None }
   }
   case object Breaker extends Tool {
     private val color = new Color(255, 0, 0, 32)
     def draw(g: Draw2D): Unit = g.window.fillRect(Cube(g.view.center - 20, g.view.center + 20), color)
-    def down(pt: Pos[Double]): Unit = {
+    def down(pt: Pos[Long]): Unit = {
       val rm = Cube(pt - 20, pt + 20)
       world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
     }
-    def move(pt: Pos[Double]): Unit = { }
-    def drag(pt: Pos[Double]): Unit = {
+    def move(pt: Pos[Long]): Unit = { }
+    def drag(pt: Pos[Long]): Unit = {
       val rm = Cube(pt - 20, pt + 20)
       world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
     }
-    def up(pt: Pos[Double]): Unit = { }
+    def up(pt: Pos[Long]): Unit = { }
+  }
+  case object Debug extends Tool {
+    var focus: Option[Entity] = None
+    def draw(g: Draw2D): Unit = focus.foreach{e => e.highlight(g, brighter = true) }
+    def down(g: Pos[Long]): Unit = { }
+    def up(pt: Pos[Long]): Unit = { }
+    def move(pt: Pos[Long]): Unit = { focus = world.entities.find(pt) }
+    def drag(pt: Pos[Long]): Unit = { }
   }
 
   reactions += {
@@ -133,14 +144,12 @@ class World(val parent: Exp.Main) extends Component {
       val debug = children.find(_.isInstanceOf[screen.Debug])
       children = if (debug.isEmpty) children + new screen.Debug(this) else children - debug.get
 
-    case KeyReleased(_, key, mods, _) =>
-      println("Other key pressed ")
-      prevKey = Some(key)
+    case KeyReleased(_, key, _, _) => prevKey = Some(key)
 
-    case MousePressed(src, pt, keys, n, _)  => view.map(_.move(pt).focus).foreach(Tool.current.down)
-    case MouseReleased(src, pt, keys, n, _) => view.map(_.move(pt).focus).foreach(Tool.current.up)
+    case MousePressed(_, pt, _, _, _)  => view.map(_.move(pt).focus).foreach(Tool.current.down)
+    case MouseReleased(_, pt, _, _, _) => view.map(_.move(pt).focus).foreach(Tool.current.up)
     // case MouseExited(_, pt, _) => Tool.current.exit(pt)
-    case MouseDragged(src, pt, keys) => view.map(_.move(pt).focus).foreach(Tool.current.drag)
+    case MouseDragged(_, pt, _) => view.map(_.move(pt).focus).foreach(Tool.current.drag)
     case MouseMoved(_, pt, _) => view.map(_.move(pt).focus).foreach(Tool.current.move)
   }
 }

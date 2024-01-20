@@ -2,21 +2,16 @@ package exp
 
 import common.immutable.Pos
 
-import java.awt.{GraphicsEnvironment, MouseInfo, Robot}
+import java.awt.GraphicsEnvironment
 import java.util.TimerTask
 import scala.swing.{Color, Frame, MainFrame}
 
 object Exp extends scala.swing.SimpleSwingApplication {
-  private def fps(n: Int): Int = 1000 / n
+  // private def fps(n: Long): Long = 1000 / n
+  // val frameRate: Long = fps(30) // ms / redraw
 
-  val pixelsPerMeter: Double = 100
-  val tickRate: Int = 10       // ms / tick
-  val frameRate: Int = fps(30) // ms / redraw
-  val gravity: Double = pixelsPerMeter * 9.8 * 1e-6 * tickRate*tickRate // 9.8 m/s^2 * (1/1000)^2 s^2/ms^2 * (ms / tick)^2
-  val terminalVelocity: Double = pixelsPerMeter * 55 * 1e-3 * tickRate // 55 m/s * (1/1000) s/ms * (ms / tick)
-
-  println(s"Gravity: $gravity pixels/tick^2")
-  println(s"Terminal: $terminalVelocity pixels/tick")
+  val pxPerMeter: Long = 1000 // px / m
+  val tickRate: Long = 30     // ms / tick
 
   class Main extends MainFrame {
     title = s"EXP"
@@ -48,9 +43,12 @@ object Exp extends scala.swing.SimpleSwingApplication {
     peer.setVisible(true)
 
     private val timer = new java.util.Timer
-    private val painter = new TimerTask { override def run(): Unit = repaint() }
-    timer.scheduleAtFixedRate(world.clock, 0, tickRate)
-    timer.scheduleAtFixedRate(painter, 0, frameRate)
+    private val tick = new TimerTask { override def run(): Unit = {
+      world.tick()
+      repaint()
+    }}
+    // timer.scheduleAtFixedRate(world.clock, 0, tickRate)
+    timer.scheduleAtFixedRate(tick, 0, tickRate)
 
     world.load()
     world.requestFocus()

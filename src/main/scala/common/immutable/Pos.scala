@@ -5,20 +5,20 @@ import common.implicits.IteratorOps.zipped
 
 import scala.language.implicitConversions
 
-class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
+class Pos[T](private val indices: List[T])(implicit num: Numeric[T]) {
   import num._
 
-  def rank: Int = inds.size
-  def iterator: Iterator[T] = inds.iterator
-  def reverseIterator: Iterator[T] = inds.reverseIterator
+  def rank: Int = indices.size
+  def iterator: Iterator[T] = indices.iterator
+  def reverseIterator: Iterator[T] = indices.reverseIterator
   def get(dim: Int): Option[T] = if (dim >= 0 && dim < rank) Some(apply(dim)) else None
   def getOrElse(dim: Int, els: => T): T = get(dim).getOrElse(els)
-  def apply(dim: Int): T = inds(dim)
+  def apply(dim: Int): T = indices(dim)
 
-  def reverse: Pos[T] = Pos(inds.reverse)
+  def reverse: Pos[T] = Pos(indices.reverse)
 
-  def product: T = inds.product
-  def sum: T = inds.sum
+  def product: T = indices.product
+  def sum: T = indices.sum
 
   // Special accessors
   def x: T = getOrElse(0, num.fromInt(1))
@@ -41,12 +41,12 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
   def max(rhs: Pos[T]): Pos[T] = Pos(iterator.zip(rhs.iterator).map{case (a,b) => num.max(a, b) })
 
   override def equals(obj: Any): Boolean = obj match {
-    case rhs: Pos[_] => inds == rhs.inds
+    case rhs: Pos[_] => indices == rhs.indices
     case _ => false
   }
-  def ==(rhs: Pos[T]): Boolean = inds == rhs.inds
-  def !=(rhs: Pos[T]): Boolean = inds != rhs.inds
-  override def hashCode(): Int = inds.hashCode()
+  def ==(rhs: Pos[T]): Boolean = indices == rhs.indices
+  def !=(rhs: Pos[T]): Boolean = indices != rhs.indices
+  override def hashCode(): Int = indices.hashCode()
 
   def isIn(volume: Cube[T]): Boolean
     = zipped(iterator, volume.min.iterator, volume.max.iterator).forall{case Seq(i, min, max) => i >= min && i <= max }
@@ -88,10 +88,11 @@ class Pos[T](private val inds: List[T])(implicit num: Numeric[T]) {
 
   def t: Pos[T] = Pos(iterator.take(rank - 2) ++ Iterator(c, r))
 
-  def toDoubles: Pos[Double] = Pos(inds.map(num.toDouble))
-  def toInts: Pos[Int] = Pos(inds.map(num.toInt))
+  def toDoubles: Pos[Double] = Pos(indices.map(num.toDouble))
+  def toInts: Pos[Int] = Pos(indices.map(num.toInt))
+  def toLongs: Pos[Long] = Pos(indices.map(num.toLong))
 
-  override def toString: String = inds.mkString("(", ", ", ")")
+  override def toString: String = indices.mkString("(", ", ", ")")
 
   lazy val strides: Pos[T] = Pos(reverseIterator.drop(1).scanLeft(num.fromInt(1)){(prev,n) => prev * n}.toSeq.reverse)
 }
@@ -134,10 +135,10 @@ object Pos {
   final class UnapplySeqWrapper[T](private val a: Pos[T]) extends AnyVal {
     def isEmpty: false = false
     def get: UnapplySeqWrapper[T] = this
-    def lengthCompare(len: Int): Int = a.inds.lengthCompare(len)
+    def lengthCompare(len: Int): Int = a.indices.lengthCompare(len)
     def apply(i: Int): T = a(i)
-    def drop(n: Int): scala.Seq[T] = a.inds.drop(n)
-    def toSeq: scala.Seq[T] = a.inds
+    def drop(n: Int): scala.Seq[T] = a.indices.drop(n)
+    def toSeq: scala.Seq[T] = a.indices
   }
 
   type Idx = Pos[Int]
@@ -145,7 +146,7 @@ object Pos {
   object Idx {
     def zero(rank: Int): Idx = Pos.zero[Int](rank)
     def apply(inds: Int*): Idx = Pos[Int](inds)
-    def unapplySeq(x: Idx): Option[Seq[Int]] = Some(x.inds)
+    def unapplySeq(x: Idx): Option[Seq[Int]] = Some(x.indices)
     def parse(str: String): Idx = Pos.parse[Int](str)
 
     case class ND(rank: Int) {

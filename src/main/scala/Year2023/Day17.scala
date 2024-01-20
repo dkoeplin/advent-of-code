@@ -21,7 +21,7 @@ object Day17 extends common.AoC(17, 2023) {
     private def count(next: Idx, prev: Option[(Idx, Int)]): Option[(Idx, Int)]
       = prev.filter(_._1 == next).map{case (dir,n) => (dir, n+1) }.orElse(Some((next, 1)))
 
-    def isEnd(loc: Loc): Boolean = (loc.pos == grid.volume.max)
+    def isEnd(loc: Loc): Boolean = { loc.pos == grid.volume.max }
     def next(loc: Loc): Iterator[Loc]
       = loc.allowedDirs(ultra).map{d => Loc(loc.pos + d, count(d, loc.dir)) }
         .filter{l => grid.has(l.pos) }

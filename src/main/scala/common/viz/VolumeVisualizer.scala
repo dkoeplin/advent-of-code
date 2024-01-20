@@ -10,8 +10,8 @@ case class VolumeVisualizer[A](volumes: IterableOnce[Cube[A]]) extends Visualize
   def apply(frame: Frame, g: Graphics2D): Unit = {
     val (a, b) = volumes.iterator.duplicate
     val bounds = b.map(_.keepDims(1, 2)).reduce(_ union _)
-    val wsize = frame.peer.getBounds
-    val wDims = Pos(wsize.getHeight, wsize.getWidth)
+    val windowSize = frame.peer.getBounds
+    val wDims = Pos(windowSize.getHeight, windowSize.getWidth)
     val scaling: Pos[Double] = wDims / bounds.shape.toDoubles
 
     val scaled = a.map{v =>
