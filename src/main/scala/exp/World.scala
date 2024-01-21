@@ -1,8 +1,8 @@
 package exp
 
 import common.immutable.{Cube, Pos}
+import exp.actor.entity.{Block, Entity}
 import exp.draw.Draw2D
-import exp.entity.{Block, Entity}
 import exp.screen.Screen
 
 import java.util.TimerTask
@@ -17,7 +17,7 @@ class World(val parent: Exp.Main) extends Component {
   listenTo(mouse.moves)
   listenTo(keys)
 
-  val entities = new entity.Manager
+  val actors = new actor.Manager
   val messages = new message.Manager
   private var children: Set[Screen] = Set.empty
   var view: Option[draw.View2D] = None
@@ -29,21 +29,22 @@ class World(val parent: Exp.Main) extends Component {
   val clock: java.util.TimerTask = new TimerTask { override def run(): Unit = tick() }
   def tick(): Unit = {
     // val start = System.nanoTime()
-    entities.awake.foreach(_.tick())
+    actors.awake.foreach(_.tick())
     // val end = System.nanoTime()
     // println(s"Tick time: ${end - start}ns")
+    Tool.current.cool()
   }
 
   def load(): Unit = {
     val windowSize = parent.windowSize
     val bottom = Cube(Pos(0, windowSize.y - 100), windowSize).toLongs
-    entities += new Block(entities.nextId, this, bottom, material.Bedrock)
+    actors += new Block(actors.nextId, this, bottom, material.Bedrock)
     view = Some(new draw.View2D(this))
   }
 
   override def paint(g: scala.swing.Graphics2D): Unit = {
     val painter = new draw.Draw2D(g, view.get)
-    entities.all.foreach(_.draw(painter))
+    actors.visible.foreach(_.draw(painter))
     /*val windowSize = Cube(Pos(0,0), parent.windowSize)
     windowSize.iteratorBy(20).iterator.foreach{p =>
       entities.findVolume(p).foreach{part =>
@@ -62,6 +63,9 @@ class World(val parent: Exp.Main) extends Component {
   }
 
   abstract class Tool {
+    protected def kMaxCooldown: Int = 0
+    protected var cooldown: Int = 0
+    def cool(): Unit = if (cooldown > 0) { cooldown -= 1 } else { cooldown = 0 }
     def draw(g: Draw2D): Unit
     def exit(pt: Pos[Long]): Unit = {}
     def down(pt: Pos[Long]): Unit
@@ -79,62 +83,63 @@ class World(val parent: Exp.Main) extends Component {
     private var pending: Option[Block] = None
     def draw(g: Draw2D): Unit = pending.foreach(_.draw(g))
     def down(pt: Pos[Long]): Unit = {
-      pending = Some(new Block(entities.nextId, world, Cube(pt, pt), material.Test.random))
+      pending = Some(new Block(actors.nextId, world, Cube(pt, pt), material.Test.random))
     }
     def move(pt: Pos[Long]): Unit = {}
     def drag(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
       val p = pending.get.iterator.next()
       val v = Cube(p.volume.l, pt)
-      val c = entities.overlappingExcept(v.toLongs, None)
+      val c = actors.get(v.toLongs)
       if (c.isEmpty)
         pending = Some(new Block(pending.get.id, world, v, p.material))
     }
     def up(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
-      entities += pending.get
+      actors += pending.get
       pending = None
     }
   }
   case object Remover extends Tool {
     private var hovered: Option[Entity] = None
-    def draw(g: Draw2D): Unit = hovered.foreach{ e =>
-      e.highlight(g, brighter = true)
-      // e.above.foreach{a => a.highlight(g, brighter = false) }
-    }
+    def draw(g: Draw2D): Unit = hovered.foreach{e => e.highlight(g, brighter = true) }
     def down(pt: Pos[Long]): Unit = { }
-    def move(pt: Pos[Long]): Unit = { hovered = world.entities.find(pt) }
+    def move(pt: Pos[Long]): Unit = { hovered = world.actors.find(pt) }
     def drag(pt: Pos[Long]): Unit = { }
     def up(pt: Pos[Long]): Unit = if (hovered.nonEmpty) {
-      hovered.get.kill()
+      world.messages.send(new message.Remove(null), hovered.get)
       hovered = None
     }
     override def exit(pt: Pos[Long]): Unit = { hovered = None }
   }
   case object Breaker extends Tool {
     private val color = new Color(255, 0, 0, 32)
+    override protected def kMaxCooldown = 1 // ticks
     def draw(g: Draw2D): Unit = g.window.fillRect(Cube(g.view.center - 20, g.view.center + 20), color)
-    def down(pt: Pos[Long]): Unit = {
+    def down(pt: Pos[Long]): Unit = if (cooldown == 0) {
       val rm = Cube(pt - 20, pt + 20)
-      world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
+      world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
+      cooldown = kMaxCooldown
     }
     def move(pt: Pos[Long]): Unit = { }
-    def drag(pt: Pos[Long]): Unit = {
+    def drag(pt: Pos[Long]): Unit = if (cooldown == 0) {
       val rm = Cube(pt - 20, pt + 20)
-      world.entities.overlappingExcept(rm, None).foreach(_.remove(rm))
+      world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
+      cooldown = kMaxCooldown
     }
     def up(pt: Pos[Long]): Unit = { }
+
+    override def toString: String = s"Break($cooldown)"
   }
   case object Debug extends Tool {
     var focus: Option[Entity] = None
     def draw(g: Draw2D): Unit = focus.foreach{e => e.highlight(g, brighter = true) }
     def down(g: Pos[Long]): Unit = { }
     def up(pt: Pos[Long]): Unit = { }
-    def move(pt: Pos[Long]): Unit = { focus = world.entities.find(pt) }
+    def move(pt: Pos[Long]): Unit = { focus = world.actors.find(pt) }
     def drag(pt: Pos[Long]): Unit = { }
   }
 
   reactions += {
     case KeyPressed(_, Key.Escape, _, _) => System.exit(0)
-    case KeyPressed(_, Key.L, _, _) => entities.alive.foreach{e => println(e) }
     case KeyPressed(_, Key.T, _, _) => Tool.next()
     case KeyPressed(_, Key.C, _, _) => view.foreach(_.recenter())
 

@@ -8,4 +8,5 @@ abstract class Material(_name: String) {
   def falls: Boolean = true
   def liquid: Boolean = false
   def immortal: Boolean = false
+  def durability: Int
 }

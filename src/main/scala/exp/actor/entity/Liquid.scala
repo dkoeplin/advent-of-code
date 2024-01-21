@@ -1,12 +1,11 @@
-package exp.entity
+package exp.actor.entity
 
 import common.immutable.{Border, Cube, Pos}
 import exp.World
+import exp.actor.Actor
 
-import scala.collection.immutable.ArraySeq
-
-class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts) {
-  def this(id: Int, world: World, vol: Cube[Long], mat: exp.material.Liquid) = this(id, world, new Parts(ArraySeq(Part(vol, mat))))
+class Liquid(id: Actor.ID, world: World, parts: Parts) extends Block(id, world, parts) {
+  def this(id: Actor.ID, world: World, vol: Cube[Long], mat: exp.material.Liquid) = this(id, world, new Parts(vol, mat))
   override val material: exp.material.Liquid = iterator.next().material.asInstanceOf[exp.material.Liquid] // FIXME
   override def falls: Boolean = material.falls
 
@@ -17,11 +16,11 @@ class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts
         case Left(cube) if World.isVertical(dir) =>
           val scaling = Pos(dir.iterator.map{case 1 => scale; case _ => 1 })
           val vol = Cube(cube.min, cube.max * scaling)
-          world.entities += new Liquid(world.entities.nextId, world, vol, material)
+          world.actors += new Liquid(world.actors.nextId, world, vol, material)
         case Left(cube) =>
           val vol = if (dir.magnitude < 0) Cube(Pos(cube.min.x, cube.min.y * scale), Pos(cube.max.x, cube.max.y * scale))
                     else Cube(cube.min, cube.max * scale)
-          world.entities += new Liquid(world.entities.nextId, world, vol, material)
+          world.actors += new Liquid(world.actors.nextId, world, vol, material)
         case Right(liq) =>
 
       }
@@ -29,7 +28,7 @@ class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts
   }
   // private var neighbors: List[Neighbor] = Nil
   private def neighbors: List[Neighbor] = parts.borders.notUp.map{case Border(_, dir, border) =>
-    val (x, y) = world.entities.overlappingExcept(border, Some(this)).duplicate
+    val (x, y) = world.actors.getExcept(border, this).duplicate
 
     val empty = x.foldLeft(List(border)){(remain,e) => remain.flatMap(_.diff(e.iterator.map(_.volume))) }
                  .filter(_.size > material.tension2)
@@ -52,6 +51,6 @@ class Liquid(id: Int, world: World, parts: Parts) extends Block(id, world, parts
   }
 
   override def break(groups: Iterator[Parts]): Iterator[Entity] = groups.map{group =>
-    new Liquid(world.entities.nextId, world, group)
+    new Liquid(world.actors.nextId, world, group)
   }
 }

@@ -1,14 +1,14 @@
 package exp.message
 
-import exp.entity.Entity
+import exp.actor.Actor
+import exp.actor.entity.Entity
 
-import scala.collection.immutable.Queue
 import scala.collection.mutable
 
 class Manager {
-  private val queues: mutable.HashMap[Int,Queue[Message]] = mutable.HashMap.empty
+  private val queues: mutable.HashMap[Actor.ID, List[Message]] = mutable.HashMap.empty
   def send(message: Message, dest: Entity): Unit = {
-    queues(dest.id) = queues.getOrElse(dest.id, Queue.empty).enqueue(message)
+    queues(dest.id) = message +: queues.getOrElse(dest.id, Nil)
     dest.wake()
   }
   def broadcast(message: Message, to: IterableOnce[Entity]): Unit = to.iterator.foreach{dest => send(message, dest) }
@@ -17,7 +17,7 @@ class Manager {
     case (msg, _) => queues.remove(entity.id); msg
   }*/
   def get(entity: Entity): Iterator[Message] = {
-    val queue = queues.getOrElse(entity.id, Queue.empty)
+    val queue = queues.getOrElse(entity.id, Nil)
     queues.remove(entity.id)
     queue.iterator
   }

@@ -1,6 +1,6 @@
 package exp.message
 
-import exp.entity.Entity
+import exp.actor.entity.Entity
 
 class Removed(from: Entity) extends Message(from) {
 
