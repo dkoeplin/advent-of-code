@@ -10,6 +10,7 @@ class Parts(parts: ArraySeq[Part]) {
   def this(parts: IterableOnce[Part]) = this(ArraySeq.from(parts))
   def this(vol: Cube[Long], mat: Material) = this(ArraySeq(Part(vol, mat, mat.durability)))
 
+  def size: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
 
   // TODO: O(N^2): Figure out how to make faster?

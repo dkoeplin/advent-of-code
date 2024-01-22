@@ -13,6 +13,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   protected var velocity: Pos[Long] = Pos.zero[Long](2)
   protected var accel: Pos[Long] = Pos(0, if (falls) world.gravity else 0)
 
+  def num: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
   def borders: Iterator[Cube[Long]] = parts.borders.all
   def size: Long = iterator.map(_.volume.size).sum
@@ -41,39 +42,6 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def contains(rhs: Pos[Long]): Boolean = iterator.exists(_.volume.contains(rhs))
   def at(rhs: Pos[Long]): Option[Part] = iterator.find(_.volume.contains(rhs))
 
-  protected def remove(rhs: Cube[Long]): Unit = {
-    val neighbors = mutable.ArrayBuffer.empty[Entity]
-    val remaining = mutable.ArrayBuffer.empty[Part]
-    var changed: Boolean = false
-    parts.foreach{part =>
-      if (part.volume.overlaps(rhs)) {
-        changed = true
-        neighbors ++= world.actors.getExcept(Cube(part.volume.min - 1, part.volume.max + 1), this)
-        remaining ++= (part diff rhs)
-      } else {
-        remaining += part
-      }
-    }
-    if (remaining.isEmpty) {
-      die()
-      world.messages.broadcast(new message.Removed(this), neighbors)
-    } else {
-      val groups = Entity.group(remaining.iterator)
-      if (groups.size > 1) {
-        die()
-        val broken = break(groups.iterator).toArray
-        world.actors ++= broken
-        broken.foreach{e => world.messages.send(new message.Move(e), e) }
-        world.messages.broadcast(new message.Move(this), neighbors) // todo: broken, not move
-      } else if (changed) {
-        // Need to send message to self to wake up?
-        parts = new Parts(remaining)
-        world.messages.send(new message.Move(this), this) // todo: broken, not move
-        world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
-      }
-    }
-  }
-
   override def tick(): Unit = {
     if (!receiveAll()) // Get all messages first
       return // End early if we died
@@ -93,7 +61,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
 
   final protected def receiveAll(): Boolean = world.messages.get(this).forall(receive)
   protected def receive(m: Message): Boolean = m match {
-    case _: message.Remove => remove()
+    case _: message.Delete => remove()
     case h: message.Hit => hit(h)
     case _ => true
   }

@@ -27,12 +27,15 @@ class World(val parent: Exp.Main) extends Component {
   def terminal: Long = 1500   // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
 
   val clock: java.util.TimerTask = new TimerTask { override def run(): Unit = tick() }
+  var tickTime: Long = 0
+  var maxTickTime: Long = 0
   def tick(): Unit = {
-    // val start = System.nanoTime()
+    val start = System.nanoTime()
     actors.awake.foreach(_.tick())
-    // val end = System.nanoTime()
-    // println(s"Tick time: ${end - start}ns")
+    val end = System.nanoTime()
     Tool.current.cool()
+    tickTime = (end - start) / 1000000
+    maxTickTime = Math.max(maxTickTime, tickTime)
   }
 
   def load(): Unit = {
@@ -105,7 +108,7 @@ class World(val parent: Exp.Main) extends Component {
     def move(pt: Pos[Long]): Unit = { hovered = world.actors.find(pt) }
     def drag(pt: Pos[Long]): Unit = { }
     def up(pt: Pos[Long]): Unit = if (hovered.nonEmpty) {
-      world.messages.send(new message.Remove(null), hovered.get)
+      world.messages.send(new message.Delete(null), hovered.get)
       hovered = None
     }
     override def exit(pt: Pos[Long]): Unit = { hovered = None }
