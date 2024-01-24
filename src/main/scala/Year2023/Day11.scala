@@ -1,12 +1,12 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Cube, Matrix, Pos}
+import common.immutable.{Box, Constructable, Matrix, Pos}
 import common.implicits.IteratorOps._
 import common.parse
 
 object Day11 extends common.AoC(11, 2023) {
-  case class Image(vol: Cube[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
+  case class Image(vol: Box[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
     lazy val galaxies: List[Idx] = indices.filter{pos => get(pos).contains('#') }.toList
     lazy val emptyCols: Set[Int] = wIterator.filterNot{j => galaxies.exists(_.c == j) }.toSet
     lazy val emptyRows: Set[Int] = hIterator.filterNot{i => galaxies.exists(_.r == i) }.toSet

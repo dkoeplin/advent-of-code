@@ -1,12 +1,12 @@
 package Year2021
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Cube}
+import common.immutable.{Box, Constructable}
 import common.mutable.Matrix
 import common.parse
 
 object Day11 extends common.AoC(11, 2021) {
-  case class Grid(vol: Cube[Int], data: Array[Int]) extends Matrix[Int](vol, data) {
+  case class Grid(vol: Box[Int], data: Array[Int]) extends Matrix[Int](vol, data) {
     var flashes: Int = 0
 
     def increment(i: Idx): Boolean = {

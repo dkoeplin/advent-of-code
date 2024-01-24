@@ -1,6 +1,6 @@
 package exp.actor
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 import exp.actor.animation.Animation
 import exp.actor.entity.{Entity, Part}
 
@@ -35,16 +35,16 @@ class Manager {
   def +=(a: Animation): Unit = { awakeList.add(a); animationList.add(a) }
 
   // TODO: Limit this somehow
-  def near(x: Cube[Long]): Iterator[Entity] = entityList.iterator
-  def nearExcept(x: Cube[Long], e: Entity): Iterator[Entity] = near(x).filterNot(_ == e)
+  def near(x: Box[Long]): Iterator[Entity] = entityList.iterator
+  def nearExcept(x: Box[Long], e: Entity): Iterator[Entity] = near(x).filterNot(_ == e)
 
-  def find(x: Pos[Long]): Option[Entity] = near(Cube(x,x)).find(_.contains(x))
+  def find(x: Pos[Long]): Option[Entity] = near(Box(x,x)).find(_.contains(x))
 
-  def get(volume: Cube[Long]): Iterator[Entity] = near(volume).filter(_.overlaps(volume))
-  def getExcept(volume: Cube[Long], e: Entity): Iterator[Entity] = nearExcept(volume, e).filter(_.overlaps(volume))
+  def get(volume: Box[Long]): Iterator[Entity] = near(volume).filter(_.overlaps(volume))
+  def getExcept(volume: Box[Long], e: Entity): Iterator[Entity] = nearExcept(volume, e).filter(_.overlaps(volume))
 
-  def getParts(volume: Cube[Long]): Iterator[Part] = near(volume).flatMap(_.overlappingParts(volume))
-  def getPartsExcept(volume: Cube[Long], e: Entity): Iterator[Part] = nearExcept(volume, e).flatMap(_.overlappingParts(volume))
+  def getParts(volume: Box[Long]): Iterator[Part] = near(volume).flatMap(_.overlappingParts(volume))
+  def getPartsExcept(volume: Box[Long], e: Entity): Iterator[Part] = nearExcept(volume, e).flatMap(_.overlappingParts(volume))
 
   def wake(e: Entity): Unit = { awakeList += e }
   def sleep(e: Entity): Unit = { awakeList -= e }

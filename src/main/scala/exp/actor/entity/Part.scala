@@ -1,16 +1,16 @@
 package exp.actor.entity
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 import exp.draw.Draw2D
 import exp.material.Material
 
 import scala.swing.Color
 
-case class Part(volume: Cube[Long], material: Material, health: Int) {
-  def this(volume: Cube[Long], material: Material) = this(volume, material, material.durability)
+case class Part(volume: Box[Long], material: Material, health: Int) {
+  def this(volume: Box[Long], material: Material) = this(volume, material, material.durability)
 
-  def overlaps(rhs: Cube[Long]): Boolean = volume.overlaps(rhs)
-  def diff(rhs: Cube[Long]): Iterator[Part] = (volume diff rhs).map{v => Part(v, material, health) }
+  def overlaps(rhs: Box[Long]): Boolean = volume.overlaps(rhs)
+  def diff(rhs: Box[Long]): Iterator[Part] = (volume diff rhs).map{ v => Part(v, material, health) }
 
   def +(pos: Pos[Long]): Part = Part(volume + pos, material, health)
 

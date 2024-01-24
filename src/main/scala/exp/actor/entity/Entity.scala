@@ -1,6 +1,6 @@
 package exp.actor.entity
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 import exp.actor.Actor
 import exp.draw.Draw2D
 import exp.message.Message
@@ -15,7 +15,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
 
   def num: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
-  def borders: Iterator[Cube[Long]] = parts.borders.all
+  def borders: Iterator[Box[Long]] = parts.borders.all
   def size: Long = iterator.map(_.volume.size).sum
 
   def falls: Boolean = iterator.forall(_.material.falls)
@@ -27,7 +27,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     val shape = part.volume.shape
     val middle = part.volume.min + shape/2
     val scaled = shape/(2*n)
-    val next = Cube(middle - scaled, middle + scaled)
+    val next = Box(middle - scaled, middle + scaled)
     Part(next, part.material, part.health)
   }
 
@@ -37,8 +37,8 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def draw(g: Draw2D): Unit = iterator.foreach(_.draw(g))
   def highlight(g: Draw2D, brighter: Boolean): Unit = iterator.foreach(_.highlight(g, brighter))
 
-  def overlappingParts(rhs: Cube[Long]): Iterator[Part] = iterator.filter(_.volume.overlaps(rhs))
-  def overlaps(rhs: Cube[Long]): Boolean = iterator.exists(_.volume.overlaps(rhs))
+  def overlappingParts(rhs: Box[Long]): Iterator[Part] = iterator.filter(_.volume.overlaps(rhs))
+  def overlaps(rhs: Box[Long]): Boolean = iterator.exists(_.volume.overlaps(rhs))
   def contains(rhs: Pos[Long]): Boolean = iterator.exists(_.volume.contains(rhs))
   def at(rhs: Pos[Long]): Option[Part] = iterator.find(_.volume.contains(rhs))
 
@@ -73,7 +73,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     parts.foreach{part => part.volume.intersect(hit.vol) match {
       case Some(both) =>
         changed = true
-        neighbors ++= world.actors.getExcept(Cube(part.volume.min - 1, part.volume.max + 1), this)
+        neighbors ++= world.actors.getExcept(Box(part.volume.min - 1, part.volume.max + 1), this)
         remaining ++= (part diff hit.vol)
         if (part.health > hit.strength)
           remaining += Part(both, part.material, part.health - hit.strength)

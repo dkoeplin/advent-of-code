@@ -1,12 +1,12 @@
 package Year2023
 
 import common.immutable.Pos._
-import common.immutable.{Constructable, Cube, Matrix}
+import common.immutable.{Box, Constructable, Matrix}
 import common.implicits.IteratorOps._
 import common.parse
 
 object Day14 extends common.AoC(14, 2023) {
-  case class Platform(vol: Cube[Int], data: Array[Char]) extends Matrix(vol, data) {
+  case class Platform(vol: Box[Int], data: Array[Char]) extends Matrix(vol, data) {
     private def slide(empty: Int, rocks: Int, reverse: Boolean): String
       = if (empty + rocks == 0) "#" else if (!reverse) "." * empty + "O" * rocks else "O" * rocks + "." * empty
 

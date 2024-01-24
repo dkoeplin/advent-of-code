@@ -1,22 +1,22 @@
 package Year2023
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 import common.viz.VolumeVisualizer
 
 object Day22 extends common.AoC(22, 2023) {
-  case class Brick(volume: Cube[Int], id: Int) {
-    def surface: Cube[Int] = volume.dropDims(2)
+  case class Brick(volume: Box[Int], id: Int) {
+    def surface: Box[Int] = volume.dropDims(2)
     def height: Int = volume.max.z - volume.min.z + 1
     def atZ(z: Int): Brick = Brick(volume.moveTo(2, z), id)
   }
   object Brick {
     def parse(x: (String, Int)): Brick = {
       val Array(minStr, maxStr) = x._1.split('~')
-      Brick(Cube(Pos.parse(minStr), Pos.parse(maxStr)), x._2)
+      Brick(Box(Pos.parse(minStr), Pos.parse(maxStr)), x._2)
     }
   }
   val bricks = data.getLines().zipWithIndex.map(Brick.parse).toArray.sortBy(_.volume.min.z)
-  val area = bricks.foldLeft(Cube(Pos(0,0), Pos(0,0))){ (surface, brick) => surface union brick.surface}
+  val area = bricks.foldLeft(Box(Pos(0,0), Pos(0,0))){ (surface, brick) => surface union brick.surface}
   val ground = Brick(area.expand(0, 0), -1)
 
   case class State(fallen: List[Brick], under: Map[Int, Set[Int]], above: Map[Int,Set[Int]]) {

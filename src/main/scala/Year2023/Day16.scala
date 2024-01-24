@@ -1,7 +1,7 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Cube, Matrix}
+import common.immutable.{Box, Constructable, Matrix}
 import common.parse
 
 object Day16 extends common.AoC(16, 2023) {
@@ -24,7 +24,7 @@ object Day16 extends common.AoC(16, 2023) {
   case class State(beams: Set[Beam], visited: Set[Beam]) {
     def this(beam: Beam) = this(Set(beam), Set.empty)
   }
-  case class Contraption(vol: Cube[Int], data: Array[Char]) extends Matrix(vol, data) {
+  case class Contraption(vol: Box[Int], data: Array[Char]) extends Matrix(vol, data) {
     def move(beam: Beam): Iterator[Beam]
       = get(beam.pos).iterator.flatMap{c => splitOrReflect(c, beam.dir) }
                               .map{d => Beam(beam.pos + d, d) }

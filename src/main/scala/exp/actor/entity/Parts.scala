@@ -1,6 +1,6 @@
 package exp.actor.entity
 
-import common.immutable.{Border, Cube}
+import common.immutable.{Border, Box}
 import exp.World
 import exp.material.Material
 
@@ -8,7 +8,7 @@ import scala.collection.immutable.ArraySeq
 
 class Parts(parts: ArraySeq[Part]) {
   def this(parts: IterableOnce[Part]) = this(ArraySeq.from(parts))
-  def this(vol: Cube[Long], mat: Material) = this(ArraySeq(Part(vol, mat, mat.durability)))
+  def this(vol: Box[Long], mat: Material) = this(ArraySeq(Part(vol, mat, mat.durability)))
 
   def size: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
@@ -20,8 +20,8 @@ class Parts(parts: ArraySeq[Part]) {
   }
 
   object borders {
-    def all: Iterator[Cube[Long]] = bordersAndDirs.iterator.map(_.volume)
-    def up: Iterator[Cube[Long]] = bordersAndDirs.iterator.collect{case Border(dim, dir, b) if World.isVertical(dim) && dir(dim) < 0 => b }
+    def all: Iterator[Box[Long]] = bordersAndDirs.iterator.map(_.volume)
+    def up: Iterator[Box[Long]] = bordersAndDirs.iterator.collect{case Border(dim, dir, b) if World.isVertical(dim) && dir(dim) < 0 => b }
     def notUp: Iterator[Border[Long]]
       = bordersAndDirs.iterator.collect{case border@Border(dim, dir, _) if !World.isVertical(dim) || dir(dim) > 0 => border }
   }

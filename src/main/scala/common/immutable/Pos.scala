@@ -48,7 +48,7 @@ class Pos[T](private val indices: List[T])(implicit num: Numeric[T]) {
   def !=(rhs: Pos[T]): Boolean = indices != rhs.indices
   override def hashCode(): Int = indices.hashCode()
 
-  def isIn(volume: Cube[T]): Boolean
+  def isIn(volume: Box[T]): Boolean
     = zipped(iterator, volume.min.iterator, volume.max.iterator).forall{case Seq(i, min, max) => i >= min && i <= max }
 
   def manhattanDist(rhs: Pos[T]): T = iterator.zip(rhs.iterator).map{case (a,b) => num.abs(a - b) }.sum
@@ -59,7 +59,7 @@ class Pos[T](private val indices: List[T])(implicit num: Numeric[T]) {
 
   def magnitude: Double = dist(Pos.zero[T](rank))
 
-  def to(rhs: Pos[T]): Cube[T] = new Cube[T](this, rhs)
+  def to(rhs: Pos[T]): Box[T] = new Box[T](this, rhs)
 
   /// Returns a new Pos with only the given dimension(s).
   def keepDims(dims: Set[Int]): Pos[T] = Pos(iterator.zipWithIndex.filter{case (_,i) => dims.contains(i) }.map(_._1))

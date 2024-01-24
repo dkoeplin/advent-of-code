@@ -1,6 +1,6 @@
 package common.mutable
 
-import common.immutable.Cube
+import common.immutable.Box
 import common.immutable.Pos.Idx
 
 trait MutableTensor[A] { this: common.immutable.Tensor[A] =>
@@ -9,8 +9,8 @@ trait MutableTensor[A] { this: common.immutable.Tensor[A] =>
   def update(i: Idx, elem: Option[A]): Unit = elem.foreach{x => update(i, x) }
 }
 
-class Tensor[A](vol: Cube[Int], data: Array[A]) extends common.immutable.Tensor[A](vol, data) with MutableTensor[A]
+class Tensor[A](vol: Box[Int], data: Array[A]) extends common.immutable.Tensor[A](vol, data) with MutableTensor[A]
 
 object Tensor extends common.immutable.StaticTensorMethods[Tensor] {
-  def apply[A](volume: Cube[Int], data: Array[A]): Tensor[A] = new Tensor(volume, data)
+  def apply[A](volume: Box[Int], data: Array[A]): Tensor[A] = new Tensor(volume, data)
 }

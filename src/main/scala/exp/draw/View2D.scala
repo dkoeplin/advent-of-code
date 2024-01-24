@@ -1,6 +1,6 @@
 package exp.draw
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 import exp.World
 
 class View2D(world: World) {
@@ -11,13 +11,13 @@ class View2D(world: World) {
   def center: Pos[Int] = world.parent.windowSize / 2
 
   def focus: Pos[Long] = _focus
-  def range: Cube[Long] = {
+  def range: Box[Long] = {
     val half = center.toLongs
-    Cube(focus - half, focus + half)
+    Box(focus - half, focus + half)
   }
 
   // Scale from world coordinates to view coordinates (allows for out of range)
-  def scale(cube: Cube[Long]): Cube[Int] = (cube - range.min).toInts
+  def scale(cube: Box[Long]): Box[Int] = (cube - range.min).toInts
   def scale(pos: Pos[Long]): Pos[Int] = (pos - range.min).toInts
 
   /*def resize(ofs: Pos[Int], size: Pos[Int]): this.type = {

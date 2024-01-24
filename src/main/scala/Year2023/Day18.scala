@@ -1,11 +1,11 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Cube, Matrix}
+import common.immutable.{Box, Matrix}
 import common.implicits.OptionOps._
 
 object Day18 extends common.AoC(18, 2023) {
-  type Rectangle = Cube[Int]
+  type Rectangle = Box[Int]
 
   case class Instruction(dir: Idx, n: Int)
   object Instruction {
@@ -41,8 +41,8 @@ object Day18 extends common.AoC(18, 2023) {
 
     def expanded(t: Rectangle): Option[Rectangle] = if ((bounds union t) != bounds) None else {
       minCol(t).zip(maxCol(t)).flatMap{case (c0, c1) =>
-        val t2 = Cube(Idx(t.min.r, c0), Idx(t.max.r, c1))
-        minRow(t2).zip(maxRow(t2)).map{case (r0, r1) => Cube(Idx(r0, c0), Idx(r1, c1)) }
+        val t2 = Box(Idx(t.min.r, c0), Idx(t.max.r, c1))
+        minRow(t2).zip(maxRow(t2)).map{case (r0, r1) => Box(Idx(r0, c0), Idx(r1, c1)) }
       }
     }
 
@@ -83,10 +83,10 @@ object Day18 extends common.AoC(18, 2023) {
     def area: Int = dug.iterator.map(_.size).sum
   }
   object Lagoon {
-    def start: Lagoon = Lagoon(Set.empty, Cube.unit(Idx(0,0)))
+    def start: Lagoon = Lagoon(Set.empty, Box.unit(Idx(0,0)))
     def apply(insts: Iterator[Instruction]): Lagoon = insts.foldLeft((Idx(0,0), Lagoon.start)){
       case ((pos,state), inst) =>
-        val trench = Cube(pos + inst.dir, pos + inst.dir*inst.n)
+        val trench = Box(pos + inst.dir, pos + inst.dir*inst.n)
         (trench.r, Lagoon(dug = state.dug + trench, state.bounds union trench))
     }._2
   }

@@ -1,7 +1,7 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Cube, Matrix}
+import common.immutable.{Box, Constructable, Matrix}
 import common.parse
 
 object Day13 extends common.AoC(13, 2023) {
@@ -12,7 +12,7 @@ object Day13 extends common.AoC(13, 2023) {
       = p.wIterator.map{j => iter.count{case (i0, i1) => p(Idx(i0, j)) != p(Idx(i1, j)) }}.sum == smudges
   }
 
-  case class Pattern(vol: Cube[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
+  case class Pattern(vol: Box[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
     private def slices(n: Int): Iterator[Slice] = (0 to n - 2).iterator.map{ i =>
       val len = math.min(i+1, n - i - 1)
       Slice(i, (i-len+1 to i).zip(i + len to i + 1 by -1))

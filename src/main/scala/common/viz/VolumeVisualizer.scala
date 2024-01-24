@@ -1,10 +1,10 @@
 package common.viz
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 
 import scala.swing.{Color, Frame, Graphics2D}
 
-case class VolumeVisualizer[A](volumes: IterableOnce[Cube[A]]) extends Visualizer {
+case class VolumeVisualizer[A](volumes: IterableOnce[Box[A]]) extends Visualizer {
   private lazy val RGB_MAX: Int = 1 << 23
 
   def apply(frame: Frame, g: Graphics2D): Unit = {

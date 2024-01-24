@@ -1,6 +1,6 @@
 package exp
 
-import common.immutable.{Cube, Pos}
+import common.immutable.{Box, Pos}
 import exp.actor.entity.{Block, Entity}
 import exp.draw.Draw2D
 import exp.screen.Screen
@@ -40,7 +40,7 @@ class World(val parent: Exp.Main) extends Component {
 
   def load(): Unit = {
     val windowSize = parent.windowSize
-    val bottom = Cube(Pos(0, windowSize.y - 100), windowSize).toLongs
+    val bottom = Box(Pos(0, windowSize.y - 100), windowSize).toLongs
     actors += new Block(actors.nextId, this, bottom, material.Bedrock)
     view = Some(new draw.View2D(this))
   }
@@ -86,12 +86,12 @@ class World(val parent: Exp.Main) extends Component {
     private var pending: Option[Block] = None
     def draw(g: Draw2D): Unit = pending.foreach(_.draw(g))
     def down(pt: Pos[Long]): Unit = {
-      pending = Some(new Block(actors.nextId, world, Cube(pt, pt), material.Test.random))
+      pending = Some(new Block(actors.nextId, world, Box(pt, pt), material.Test.random))
     }
     def move(pt: Pos[Long]): Unit = {}
     def drag(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
       val p = pending.get.iterator.next()
-      val v = Cube(p.volume.l, pt)
+      val v = Box(p.volume.l, pt)
       val c = actors.get(v.toLongs)
       if (c.isEmpty)
         pending = Some(new Block(pending.get.id, world, v, p.material))
@@ -116,15 +116,15 @@ class World(val parent: Exp.Main) extends Component {
   case object Breaker extends Tool {
     private val color = new Color(255, 0, 0, 32)
     override protected def kMaxCooldown = 1 // ticks
-    def draw(g: Draw2D): Unit = g.window.fillRect(Cube(g.view.center - 20, g.view.center + 20), color)
+    def draw(g: Draw2D): Unit = g.window.fillRect(Box(g.view.center - 20, g.view.center + 20), color)
     def down(pt: Pos[Long]): Unit = if (cooldown == 0) {
-      val rm = Cube(pt - 20, pt + 20)
+      val rm = Box(pt - 20, pt + 20)
       world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
       cooldown = kMaxCooldown
     }
     def move(pt: Pos[Long]): Unit = { }
     def drag(pt: Pos[Long]): Unit = if (cooldown == 0) {
-      val rm = Cube(pt - 20, pt + 20)
+      val rm = Box(pt - 20, pt + 20)
       world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
       cooldown = kMaxCooldown
     }

@@ -1,7 +1,7 @@
 package Year2023
 
 import common.immutable.Pos.Idx
-import common.immutable.{Constructable, Cube, Matrix}
+import common.immutable.{Box, Constructable, Matrix}
 import common.math.{Even, Odd}
 import common.parse
 
@@ -25,7 +25,7 @@ object Day10 extends common.AoC(10, 2023) {
       outside = outside ++ (if (isInside) Set.empty else nodes))
   }
 
-  case class Diagram(vol: Cube[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
+  case class Diagram(vol: Box[Int], data: Array[Char]) extends Matrix[Char](vol, data) {
     val start: Idx = indexWhere(_ == 'S').get
     private val types: Map[Char, Seq[Idx]] = {
       val next = Idx.D2.nondiag.filter{d => pipeNeighbors(d + start, pipes).contains(start) }.toSeq

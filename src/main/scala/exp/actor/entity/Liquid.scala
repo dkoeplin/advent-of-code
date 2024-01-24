@@ -1,25 +1,25 @@
 package exp.actor.entity
 
-import common.immutable.{Border, Cube, Pos}
+import common.immutable.{Border, Box, Pos}
 import exp.World
 import exp.actor.Actor
 
 class Liquid(id: Actor.ID, world: World, parts: Parts) extends Block(id, world, parts) {
-  def this(id: Actor.ID, world: World, vol: Cube[Long], mat: exp.material.Liquid) = this(id, world, new Parts(vol, mat))
+  def this(id: Actor.ID, world: World, vol: Box[Long], mat: exp.material.Liquid) = this(id, world, new Parts(vol, mat))
   override val material: exp.material.Liquid = iterator.next().material.asInstanceOf[exp.material.Liquid] // FIXME
   override def falls: Boolean = material.falls
 
-  case class Neighbor(v: Either[Cube[Long], Liquid], dir: Pos[Long]) {
+  case class Neighbor(v: Either[Box[Long], Liquid], dir: Pos[Long]) {
     def size: Long = v match {case Left(c) => c.size; case Right(l) => l.size }
     def spread(scale: Long): Unit = {
       v match {
         case Left(cube) if World.isVertical(dir) =>
           val scaling = Pos(dir.iterator.map{case 1 => scale; case _ => 1 })
-          val vol = Cube(cube.min, cube.max * scaling)
+          val vol = Box(cube.min, cube.max * scaling)
           world.actors += new Liquid(world.actors.nextId, world, vol, material)
         case Left(cube) =>
-          val vol = if (dir.magnitude < 0) Cube(Pos(cube.min.x, cube.min.y * scale), Pos(cube.max.x, cube.max.y * scale))
-                    else Cube(cube.min, cube.max * scale)
+          val vol = if (dir.magnitude < 0) Box(Pos(cube.min.x, cube.min.y * scale), Pos(cube.max.x, cube.max.y * scale))
+                    else Box(cube.min, cube.max * scale)
           world.actors += new Liquid(world.actors.nextId, world, vol, material)
         case Right(liq) =>
 
