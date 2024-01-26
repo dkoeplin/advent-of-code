@@ -15,7 +15,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
 
   def num: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
-  def borders: Iterator[Box[Long]] = parts.borders.all
+  def borders: Iterator[Box[Long]] = parts.bounds.all
   def size: Long = iterator.map(_.volume.size).sum
 
   def falls: Boolean = iterator.forall(_.material.falls)
@@ -31,8 +31,8 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     Part(next, part.material, part.health)
   }
 
-  def above: Iterator[Entity] = parts.borders.up.flatMap{b => world.actors.getExcept(b, this) }
-  def bordering: Iterator[Entity] = parts.borders.all.flatMap{b => world.actors.getExcept(b, this) }
+  def above: Iterator[Entity] = parts.bounds.up.flatMap{ b => world.actors.getExcept(b, this) }
+  def bordering: Iterator[Entity] = parts.bounds.all.flatMap{ b => world.actors.getExcept(b, this) }
 
   def draw(g: Draw2D): Unit = iterator.foreach(_.draw(g))
   def highlight(g: Draw2D, brighter: Boolean): Unit = iterator.foreach(_.highlight(g, brighter))
@@ -68,38 +68,36 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
 
   protected def hit(hit: message.Hit): Boolean = {
     val neighbors = mutable.ArrayBuffer.empty[Entity]
-    val remaining = mutable.ArrayBuffer.empty[Part]
+    val groups = PartsGroupBuilder.empty
+    // val remaining = mutable.ArrayBuffer.empty[Part]
     var changed: Boolean = false
     parts.foreach{part => part.volume.intersect(hit.vol) match {
       case Some(both) =>
         changed = true
         neighbors ++= world.actors.getExcept(Box(part.volume.min - 1, part.volume.max + 1), this)
-        remaining ++= (part diff hit.vol)
+        groups ++= (part diff hit.vol)
         if (part.health > hit.strength)
-          remaining += Part(both, part.material, part.health - hit.strength)
+          groups += Part(both, part.material, part.health - hit.strength)
       case None =>
-        remaining += part
+        groups += part
     }}
-    if (remaining.isEmpty) {
+    if (groups.isEmpty) {
       world.messages.broadcast(new message.Removed(this), neighbors)
       die()
+    } else if (groups.size > 1) {
+      val broken = break(groups.finish).toArray
+      world.actors ++= broken
+      broken.foreach{e => world.messages.send(new message.Move(e), e) }
+      world.messages.broadcast(new message.Move(this), neighbors) // todo: broken, not move
+      die()
+    } else if (changed) {
+      // Need to send message to self to wake up?
+      parts = groups.finish.next()
+      world.messages.send(new message.Move(this), this) // todo: broken, not move
+      world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
+      true
     } else {
-      val groups = Entity.group(remaining.iterator)
-      if (groups.size > 1) {
-        val broken = break(groups.iterator).toArray
-        world.actors ++= broken
-        broken.foreach{e => world.messages.send(new message.Move(e), e) }
-        world.messages.broadcast(new message.Move(this), neighbors) // todo: broken, not move
-        die()
-      } else if (changed) {
-        // Need to send message to self to wake up?
-        parts = new Parts(remaining)
-        world.messages.send(new message.Move(this), this) // todo: broken, not move
-        world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
-        true
-      } else {
-        true
-      }
+      true
     }
   }
 
@@ -116,29 +114,6 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   final protected def sleep(): Unit = { world.actors.sleep(this) }
 }
 object Entity {
-  def group(parts: Iterator[Part]): Iterable[Parts] = {
-    var count: Int = 0
-    val groups: mutable.HashMap[Int, Parts] = mutable.HashMap.empty
-    val lookup: mutable.HashMap[Part, Int] = mutable.HashMap.empty
-
-    parts.foreach{part =>
-      val sets = mutable.HashSet.empty[Int]
-      val parts = mutable.ArrayBuffer[Part](part)
-      groups.foreach{case (idx, group) =>
-        if (group.borders.all.exists{border =>
-          border.overlaps(part.volume) }) {
-          sets += idx
-          parts ++= group.iterator
-        }
-      }
-      groups(count) = new Parts(parts)
-      groups.subtractAll(sets)
-      parts.foreach{part => lookup(part) = count }
-      count += 1
-    }
-    groups.values
-  }
-
   def updateVelocity(world: World, entity: Entity): Pos[Long] = {
     Pos(entity.velocity.iterator.zip(entity.accel.iterator).zipWithIndex.map{case ((vInit, a), dim) =>
       val reduce = {(a: Long, b: Long) => if (vInit >= 0) Math.min(a,b) else Math.max(a,b) }
