@@ -30,7 +30,7 @@ class Liquid(id: Actor.ID, world: World, parts: Parts) extends Block(id, world, 
   private def neighbors: List[Neighbor] = parts.borders.notUp.map{case Border(_, dir, border) =>
     val (x, y) = world.actors.getExcept(border, this).duplicate
 
-    val empty = x.foldLeft(List(border)){(remain,e) => remain.flatMap(_.diff(e.iterator.map(_.volume))) }
+    val empty = x.foldLeft(List(border)){(remain,e) => remain.flatMap(_.diff(e.iterator.map(_.box))) }
                  .filter(_.size > material.tension2)
 
     val liquid = y.collect{case l: Liquid if l.material == material => l }

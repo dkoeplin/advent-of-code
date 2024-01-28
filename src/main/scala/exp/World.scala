@@ -91,7 +91,7 @@ class World(val parent: Exp.Main) extends Component {
     def move(pt: Pos[Long]): Unit = {}
     def drag(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
       val p = pending.get.iterator.next()
-      val v = Box(p.volume.l, pt)
+      val v = Box(p.box.l, pt)
       val c = actors.get(v.toLongs)
       if (c.isEmpty)
         pending = Some(new Block(pending.get.id, world, v, p.material))

@@ -1,28 +1,30 @@
 package exp.actor.entity
 
 import common.immutable.{Border, Box}
+import common.mutable.RTree
 
 import scala.collection.immutable.ArraySeq
 import scala.collection.mutable
 
-class PartsBuilder {
-  val parts = mutable.ArrayBuffer.empty[Part]
-  var borders = ArraySeq.empty[Border[Long]]
-  def nearby(v: Box[Long]): Iterator[Part] = parts.iterator // TODO: Make this faster
+class PartsBuilder(rank: Int) {
+  val parts: RTree[Long,Part] = RTree.empty[Long,Part](rank)
+  var borders: ArraySeq[Border[Long]] = ArraySeq.empty[Border[Long]]
 
-  def finish: Parts = new Parts(ArraySeq.from(parts), borders)
+  private def nearby(v: Box[Long]): Iterator[Part] = parts(v).iterator
+
+  def finish: Parts = new Parts(parts, borders)
 
   /// Perform the addition of this part without actually adding it yet
   def prepareToAdd(part: Part): Boolean = {
-    val (overlap, nonoverlap) = borders.iterator.partition{b => b.volume.overlaps(part.volume) }
+    val (overlap, nonoverlap) = borders.iterator.partition{b => b.volume.overlaps(part.box) }
     if (overlap.nonEmpty) {
-      borders = ArraySeq.from(nonoverlap ++ overlap.flatMap{b => b diff part.volume })
+      borders = ArraySeq.from(nonoverlap ++ overlap.flatMap{b => b diff part.box })
       true
     } else false
   }
   def finishAdding(part: Part): Unit = {
     parts += part
-    borders = borders ++ part.volume.borders().flatMap{b => b diff nearby(b.volume).map(_.volume) }
+    borders = borders ++ part.box.borders().flatMap{ b => b diff nearby(b.volume).map(_.box) }
   }
 
   def +=(part: Part): Unit = {
@@ -31,7 +33,7 @@ class PartsBuilder {
   }
 }
 object PartsBuilder {
-  def empty: PartsBuilder = new PartsBuilder
+  def empty(rank: Int): PartsBuilder = new PartsBuilder(rank)
 }
 
 class PartsGroupBuilder {
@@ -44,7 +46,7 @@ class PartsGroupBuilder {
 
     val idx = if (sets.length == 1) sets.head else {
       count += 1
-      val result = PartsBuilder.empty
+      val result = PartsBuilder.empty(part.box.rank)
       val builders = sets.map(groups.apply)
       result.parts ++= builders.iterator.flatMap{_.parts.iterator}
       result.borders = ArraySeq.from(builders.iterator.flatMap{_.borders.iterator})

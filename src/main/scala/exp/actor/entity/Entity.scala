@@ -16,7 +16,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def num: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
   def borders: Iterator[Box[Long]] = parts.bounds.all
-  def size: Long = iterator.map(_.volume.size).sum
+  def size: Long = iterator.map(_.box.size).sum
 
   def falls: Boolean = iterator.forall(_.material.falls)
   def immortal: Boolean = iterator.exists(_.material.immortal)
@@ -24,8 +24,8 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def break(groups: Iterator[Parts]): Iterator[Entity]
 
   def scale(n: Long): Unit = parts = parts.map{part =>
-    val shape = part.volume.shape
-    val middle = part.volume.min + shape/2
+    val shape = part.box.shape
+    val middle = part.box.min + shape/2
     val scaled = shape/(2*n)
     val next = Box(middle - scaled, middle + scaled)
     Part(next, part.material, part.health)
@@ -37,10 +37,10 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def draw(g: Draw2D): Unit = iterator.foreach(_.draw(g))
   def highlight(g: Draw2D, brighter: Boolean): Unit = iterator.foreach(_.highlight(g, brighter))
 
-  def overlappingParts(rhs: Box[Long]): Iterator[Part] = iterator.filter(_.volume.overlaps(rhs))
-  def overlaps(rhs: Box[Long]): Boolean = iterator.exists(_.volume.overlaps(rhs))
-  def contains(rhs: Pos[Long]): Boolean = iterator.exists(_.volume.contains(rhs))
-  def at(rhs: Pos[Long]): Option[Part] = iterator.find(_.volume.contains(rhs))
+  def overlappingParts(rhs: Box[Long]): Iterator[Part] = iterator.filter(_.box.overlaps(rhs))
+  def overlaps(rhs: Box[Long]): Boolean = iterator.exists(_.box.overlaps(rhs))
+  def contains(rhs: Pos[Long]): Boolean = iterator.exists(_.box.contains(rhs))
+  def at(rhs: Pos[Long]): Option[Part] = iterator.find(_.box.contains(rhs))
 
   override def tick(): Unit = {
     if (!receiveAll()) // Get all messages first
@@ -71,10 +71,10 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     val groups = PartsGroupBuilder.empty
     // val remaining = mutable.ArrayBuffer.empty[Part]
     var changed: Boolean = false
-    parts.foreach{part => part.volume.intersect(hit.vol) match {
+    parts.foreach{part => part.box.intersect(hit.vol) match {
       case Some(both) =>
         changed = true
-        neighbors ++= world.actors.getExcept(Box(part.volume.min - 1, part.volume.max + 1), this)
+        neighbors ++= world.actors.getExcept(Box(part.box.min - 1, part.box.max + 1), this)
         groups ++= (part diff hit.vol)
         if (part.health > hit.strength)
           groups += Part(both, part.material, part.health - hit.strength)
@@ -118,13 +118,13 @@ object Entity {
     Pos(entity.velocity.iterator.zip(entity.accel.iterator).zipWithIndex.map{case ((vInit, a), dim) =>
       val reduce = {(a: Long, b: Long) => if (vInit >= 0) Math.min(a,b) else Math.max(a,b) }
       if (entity.iterator.isEmpty || (vInit == 0 && a == 0)) 0 else entity.iterator.map{part =>
-        val current = if (vInit >= 0) part.volume.max(dim) else part.volume.min(dim)
+        val current = if (vInit >= 0) part.box.max(dim) else part.box.min(dim)
         val v = Math.min(world.terminal, vInit + a)
-        val trajectory = part.volume.alter(dim, current, current + v) // travel range in this tick
+        val trajectory = part.box.alter(dim, current, current + v) // travel range in this tick
         world.actors.getPartsExcept(trajectory, entity) match {
           case others if others.nonEmpty =>
-            val top = if (v >= 0) others.minBy(_.volume.min(dim)) else others.maxBy(_.volume.max(dim))
-            val bound = if (v >= 0) top.volume.min(dim) - 1 else top.volume.max(dim) + 1
+            val top = if (v >= 0) others.minBy(_.box.min(dim)) else others.maxBy(_.box.max(dim))
+            val bound = if (v >= 0) top.box.min(dim) - 1 else top.box.max(dim) + 1
             bound - current
           case _ => v
         }

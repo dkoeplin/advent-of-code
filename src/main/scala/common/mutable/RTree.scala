@@ -35,9 +35,6 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     }
   }
 
-
-  def shape: Pos[A] = bounds.shape
-
   private case class Visit(node: Node, pos: Pos[A], entries: Set[V])
   private def traverse(v: Box[A]): List[Visit] = {
     case class Work(node: Node, vol: Box[A])
@@ -55,11 +52,9 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     }.dropWhile(_._1.nonEmpty).next()._2
   }
 
-  def apply(i: Box[A]): List[V] = traverse(i).flatMap(_.entries)
-  def apply(i: Pos[A]): List[V] = traverse(Box(i, i)).flatMap(_.entries)
-
   private def add(v: V): Unit = {
     bounds = bounds union v.box
+    entries += v
     traverse(v.box).foreach{case Visit(node, pos, entries) =>
       if (entries.size + 1 < kMaxEntries) {
         node(pos) = Right(entries + v)
@@ -71,6 +66,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   private def remove(v: V): Unit = {
+    entries -= v
     var worklist = mutable.LinkedHashSet.empty[Node]
     traverse(v.box).foreach{case Visit(node, pos, entries) =>
       if (entries.size == 1) {
@@ -109,9 +105,22 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   def +=(v: V): Unit = add(v)
+  def ++=(v: IterableOnce[V]): Unit = v.iterator.foreach(add)
+
   def -=(v: V): Unit = remove(v)
+  def --=(v: IterableOnce[V]): Unit = v.iterator.foreach(remove)
+
+  def apply(i: Box[A]): List[V] = traverse(i).flatMap(_.entries)
+  def apply(i: Pos[A]): List[V] = traverse(Box(i, i)).flatMap(_.entries)
+
+  def bbox: Box[A] = bounds
+  def shape: Pos[A] = bounds.shape
+  def size: Int = entries.size
+  def iterator: Iterator[V] = entries.iterator
+  def foreach(func: V => Unit): Unit = entries.foreach(func)
 
   private var bounds: Box[A] = Box(Pos.zero[A](rank), Pos.zero[A](rank))
+  private val entries = mutable.LinkedHashSet.empty[V]
   private val root = Node.empty(grid = Pos.fill[A](rank, int.fromInt(1024)))
 }
 object RTree {
@@ -121,5 +130,9 @@ object RTree {
     entries.iterator.foreach{entry => tree += entry}
     tree
   }
-
+  def single[A:Integral,V](entry: V, maxEntries: Int = 10)(implicit v: HasBox[A,V]): RTree[A,V] = {
+    val tree = new RTree(v.box(entry).rank, maxEntries)
+    tree += entry
+    tree
+  }
 }

@@ -1,13 +1,14 @@
 package exp.actor.entity
 
 import common.immutable.{Border, Box}
+import common.mutable.RTree
 import exp.World
 import exp.material.Material
 
 import scala.collection.immutable.ArraySeq
 
-class Parts(parts: ArraySeq[Part], val _borders: ArraySeq[Border[Long]]) {
-  def this(vol: Box[Long], mat: Material) = this(ArraySeq(new Part(vol, mat)), ArraySeq.from(vol.borders()))
+class Parts(parts: RTree[Long,Part], val _borders: ArraySeq[Border[Long]]) {
+  def this(vol: Box[Long], mat: Material) = this(RTree.single[Long,Part](new Part(vol, mat)), ArraySeq.from(vol.borders()))
   def size: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
 
@@ -22,7 +23,7 @@ class Parts(parts: ArraySeq[Part], val _borders: ArraySeq[Border[Long]]) {
   }
 
   def map(func: Part => Part): Parts = {
-    val builder = new PartsBuilder
+    val builder = new PartsBuilder(parts.rank)
     foreach{part => builder += func(part) }
     builder.finish
   }
