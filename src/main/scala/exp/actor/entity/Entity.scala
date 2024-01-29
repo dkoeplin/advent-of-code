@@ -1,6 +1,7 @@
 package exp.actor.entity
 
 import common.immutable.{Box, Pos}
+import common.mutable.RTree
 import exp.actor.Actor
 import exp.draw.Draw2D
 import exp.message.Message
@@ -17,6 +18,9 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def iterator: Iterator[Part] = parts.iterator
   def borders: Iterator[Box[Long]] = parts.bounds.all
   def size: Long = iterator.map(_.box.size).sum
+
+  // Debug view of RTree
+  def tree: RTree[Long,Part] = parts.tree
 
   def falls: Boolean = iterator.forall(_.material.falls)
   def immortal: Boolean = iterator.exists(_.material.immortal)

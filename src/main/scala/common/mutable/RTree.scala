@@ -11,6 +11,7 @@ import scala.collection.mutable
  */
 class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int: Integral[A], vol: HasBox[A,V]) {
   import HasBox._
+  import int._
 
   private type Entry = Either[Node,Set[V]]
 
@@ -25,13 +26,13 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   private case object Null extends Node(None, null, null)
   private object Node {
     def empty(grid: Pos[A]): Node = new Node(None, mutable.HashMap.empty[Pos[A],Entry], grid)
-    def create(parent: (Node, Pos[A]), volume: Box[A], values: Set[V]): Node = {
-      val grid: Pos[A] = values.map(_.box.shape).reduce(_ min _)
+    def create(parent: Node, pos: Pos[A], volume: Box[A], values: Set[V]): Node = {
+      val grid: Pos[A] = parent.grid / int.fromInt(2) // values.map(_.box.shape).reduce(_ min _)
       val map = mutable.HashMap.empty[Pos[A], Entry] ++ values.flatMap{v =>
         v.box.intersect(volume).iterator.flatMap{ vol => floor(vol, grid).iteratorBy(grid).map{pos => pos -> v }}
       }.groupMapReduce(_._1)(v => Right(Set(v._2)) ){(a,b) => Right(a.value ++ b.value) }
         .filter{p => p._2.isLeft || p._2.value.nonEmpty }
-      new Node(Some(parent), map, grid)
+      new Node(Some((parent, pos)), map, grid)
     }
   }
 
@@ -52,15 +53,16 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     }.dropWhile(_._1.nonEmpty).next()._2
   }
 
+
   private def add(v: V): Unit = {
     bounds = bounds union v.box
     entries += v
     traverse(v.box).foreach{case Visit(node, pos, entries) =>
-      if (entries.size + 1 < kMaxEntries) {
+      if (entries.size + 1 < kMaxEntries || node.grid.iterator.exists(_ <= int.fromInt(2))) {
         node(pos) = Right(entries + v)
       } else {
         val range = Box(pos, pos + (node.grid - int.one))
-        node(pos) = Left(Node.create((node, pos), range, entries + v))
+        node(pos) = Left(Node.create(node, pos, range, entries + v))
       }
     }
   }
@@ -89,20 +91,26 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     }
   }
 
-  def dump(): Unit = {
+  def preorder(preorder: (Int, Box[A], Pos[A]) => Unit)(func: (Int, Box[A], Set[V]) => Unit): Unit = {
     val worklist = mutable.Stack.empty[(Int, Node)]
     worklist += ((0, root))
     while (worklist.nonEmpty) {
-      val (indent, current) = worklist.pop()
+      val (depth, current) = worklist.pop()
       val pos: Pos[A] = current.parent.map(_._2).getOrElse(Pos.zero[A](rank))
       val end: Pos[A] = pos + current.parent.map(_._1.grid).getOrElse(Pos.zero[A](rank)) - int.one
-      println(s"${"  "*indent}$pos to $end: Grid ${current.grid}")
-      current.map.foreach{
-        case (k, Left(child)) => worklist += ((indent + 1, child))
-        case (k, Right(vs))   => println(s"${"  "*(indent + 1)}$k: ${vs.mkString(", ")}")
+      if (depth > 0) preorder(depth, Box(pos, end), current.grid)
+      current.map.foreach {
+        case (k, Left(child)) => worklist += ((depth + 1, child))
+        case (k, Right(vs)) =>
+          val box = Box(k, k + current.grid - int.one)
+          func(depth, box, vs)
       }
     }
   }
+  def iterate(func: (Int, Box[A], Set[V]) => Unit): Unit = preorder{(_,_,_) => ()}(func)
+
+  def dump(): Unit = preorder{case (lvl, box, gd) => println(s"${"  "*lvl}$box: Grid $gd") }
+                             {case (lvl, box, vs) => println(s"${"  "*(lvl + 1)}$box: ${entries.mkString(", ")}") }
 
   def +=(v: V): Unit = add(v)
   def ++=(v: IterableOnce[V]): Unit = v.iterator.foreach(add)
@@ -118,6 +126,18 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def size: Int = entries.size
   def iterator: Iterator[V] = entries.iterator
   def foreach(func: V => Unit): Unit = entries.foreach(func)
+
+  /// Debug info
+  def depth: Int = {
+    var maxDepth: Int = 1
+    iterate{case (lvl, _, _) => maxDepth = Math.max(lvl + 1, maxDepth) }
+    maxDepth
+  }
+  def nodes: Int = {
+    var nodes: Int = 1
+    preorder{case (_,_,_) => nodes += 1}{case (_,_,_) => ()}
+    nodes
+  }
 
   private var bounds: Box[A] = Box(Pos.zero[A](rank), Pos.zero[A](rank))
   private val entries = mutable.LinkedHashSet.empty[V]

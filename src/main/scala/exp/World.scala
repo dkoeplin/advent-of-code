@@ -152,6 +152,10 @@ class World(val parent: Exp.Main) extends Component {
       val debug = children.find(_.isInstanceOf[screen.Debug])
       children = if (debug.isEmpty) children + new screen.Debug(this) else children - debug.get
 
+    case KeyPressed(_, Key.D, _, _) =>
+      val hover = view.flatMap{v => actors.find(v.focus)}
+      hover.foreach{e => e.tree.dump() }
+
     case KeyReleased(_, key, _, _) => prevKey = Some(key)
 
     case MousePressed(_, pt, _, _, _)  => view.map(_.move(pt).focus).foreach(Tool.current.down)

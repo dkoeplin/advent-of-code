@@ -12,6 +12,9 @@ class Parts(parts: RTree[Long,Part], val _borders: ArraySeq[Border[Long]]) {
   def size: Int = parts.size
   def iterator: Iterator[Part] = parts.iterator
 
+  // Debug view of tree
+  def tree: RTree[Long,Part] = parts
+
   object borders {
     def notUp: Iterator[Border[Long]]
       = _borders.iterator.collect{case border@Border(dim, dir, _) if !World.isVertical(dim) || dir(dim) > 0 => border }
