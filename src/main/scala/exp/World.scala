@@ -6,6 +6,7 @@ import exp.draw.Draw2D
 import exp.screen.Screen
 
 import java.util.TimerTask
+import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.swing._
 import scala.swing.event._
@@ -33,7 +34,7 @@ class World(val parent: Exp.Main) extends Component {
     val start = System.nanoTime()
     actors.awake.foreach(_.tick())
     val end = System.nanoTime()
-    Tool.current.cool()
+    Tool.current.tick()
     tickTime = (end - start) / 1000000
     maxTickTime = Math.max(maxTickTime, tickTime)
   }
@@ -68,7 +69,7 @@ class World(val parent: Exp.Main) extends Component {
   abstract class Tool {
     protected def kMaxCooldown: Int = 0
     protected var cooldown: Int = 0
-    def cool(): Unit = if (cooldown > 0) { cooldown -= 1 } else { cooldown = 0 }
+    def tick(): Unit = if (cooldown > 0) { cooldown -= 1 } else { cooldown = 0 }
     def draw(g: Draw2D): Unit
     def exit(pt: Pos[Long]): Unit = {}
     def down(pt: Pos[Long]): Unit
@@ -83,22 +84,24 @@ class World(val parent: Exp.Main) extends Component {
     def current: Tool = list(index)
   }
   case object Creator extends Tool {
-    private var pending: Option[Block] = None
+    var init: Option[Pos[Long]] = None
+    var pending: Option[Block] = None
     def draw(g: Draw2D): Unit = pending.foreach(_.draw(g))
-    def down(pt: Pos[Long]): Unit = {
+    def down(pt: Pos[Long]): Unit = if (actors.find(pt).isEmpty) {
+      init = Some(pt)
       pending = Some(new Block(actors.nextId, world, Box(pt, pt), material.Test.random))
     }
     def move(pt: Pos[Long]): Unit = {}
     def drag(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
-      val p = pending.get.iterator.next()
-      val v = Box(p.box.l, pt)
-      val c = actors.get(v.toLongs)
+      val box = Box(init.get, pt)
+      val c = actors.get(box)
       if (c.isEmpty)
-        pending = Some(new Block(pending.get.id, world, v, p.material))
+        pending = Some(new Block(pending.get.id, world, box, pending.get.material))
     }
     def up(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
       actors += pending.get
       pending = None
+      init = None
     }
   }
   case object Remover extends Tool {
@@ -115,18 +118,24 @@ class World(val parent: Exp.Main) extends Component {
   }
   case object Breaker extends Tool {
     private val color = new Color(255, 0, 0, 32)
-    override protected def kMaxCooldown = 1 // ticks
+    private var pending: mutable.Map[Entity, Set[Box[Long]]] = mutable.Map.empty
+    override def tick(): Unit = {
+      pending.foreach{case (entity, rms) => rms.foreach{rm =>
+        world.messages.send(new message.Hit(null, rm, strength=1), entity)
+      }}
+      pending.clear()
+    }
     def draw(g: Draw2D): Unit = g.window.fillRect(Box(g.view.center - 20, g.view.center + 20), color)
-    def down(pt: Pos[Long]): Unit = if (cooldown == 0) {
+    def down(pt: Pos[Long]): Unit = {
       val rm = Box(pt - 20, pt + 20)
-      world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
-      cooldown = kMaxCooldown
+      world.actors.get(rm).foreach{e => pending(e) = pending.getOrElse(e, Set.empty) + rm }
+      // world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
+      // cooldown = kMaxCooldown
     }
     def move(pt: Pos[Long]): Unit = { }
     def drag(pt: Pos[Long]): Unit = if (cooldown == 0) {
       val rm = Box(pt - 20, pt + 20)
-      world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
-      cooldown = kMaxCooldown
+      world.actors.get(rm).foreach{e => pending(e) = pending.getOrElse(e, Set.empty) + rm }
     }
     def up(pt: Pos[Long]): Unit = { }
 

@@ -5,6 +5,13 @@ import common.immutable.{Box, Pos}
 import scala.swing.Color
 
 class Draw2D(g: scala.swing.Graphics2D, val view: View2D) {
+  def at(pos: Pos[Long])(func: => Unit): Unit = {
+    val offset = pos.toInts
+    g.translate(offset.x, offset.y)
+    func
+    g.translate(-offset.x, -offset.y)
+  }
+
   def fillRect(x: Box[Long], color: Color): Unit = window.fillRect(view.scale(x), color)
   def lineRect(x: Box[Long], color: Color): Unit = window.lineRect(view.scale(x), color)
 

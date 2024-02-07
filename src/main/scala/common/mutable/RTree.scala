@@ -53,11 +53,9 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     }.dropWhile(_._1.nonEmpty).next()._2
   }
 
-
-  private def add(v: V): Unit = {
-    bounds = bounds union v.box
-    entries += v
-    traverse(v.box).foreach{case Visit(node, pos, entries) =>
+  private def addAt(v: V, box: Box[A]): Unit = {
+    bounds = bounds union box
+    traverse(box).foreach{case Visit(node, pos, entries) =>
       if (entries.size + 1 < kMaxEntries || node.grid.iterator.exists(_ <= int.fromInt(2))) {
         node(pos) = Right(entries + v)
       } else {
@@ -67,10 +65,14 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     }
   }
 
-  private def remove(v: V): Unit = {
-    entries -= v
+  private def add(v: V): Unit = {
+    entries += v
+    addAt(v, v.box)
+  }
+
+  private def removeFrom(v: V, box: Box[A]): Unit = {
     var worklist = mutable.LinkedHashSet.empty[Node]
-    traverse(v.box).foreach{case Visit(node, pos, entries) =>
+    traverse(box).foreach{case Visit(node, pos, entries) =>
       if (entries.size == 1) {
         node.map.remove(pos)
         if (node.map.isEmpty)
@@ -89,6 +91,11 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
         case None => // Do nothing, never delete the root
       }
     }
+  }
+
+  private def remove(v: V): Unit = {
+    entries -= v
+    removeFrom(v, v.box)
   }
 
   def preorder(preorder: (Int, Box[A], Pos[A]) => Unit)(func: (Int, Box[A], Set[V]) => Unit): Unit = {
@@ -118,14 +125,21 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def -=(v: V): Unit = remove(v)
   def --=(v: IterableOnce[V]): Unit = v.iterator.foreach(remove)
 
-  def apply(i: Box[A]): List[V] = traverse(i).flatMap(_.entries)
-  def apply(i: Pos[A]): List[V] = traverse(Box(i, i)).flatMap(_.entries)
+  def apply(i: Box[A]): List[V] = traverse(i - offset).flatMap(_.entries)
+  def apply(i: Pos[A]): List[V] = traverse(Box(i, i) - offset).flatMap(_.entries)
 
-  def bbox: Box[A] = bounds
+  def loc: Pos[A] = bounds.min + offset
+  def bbox: Box[A] = bounds + offset
   def shape: Pos[A] = bounds.shape
   def size: Int = entries.size
   def iterator: Iterator[V] = entries.iterator
-  def foreach(func: V => Unit): Unit = entries.foreach(func)
+  def move(delta: Pos[A]): Unit = { offset += delta }
+  def moveto(pos: Pos[A]): Unit = { offset = pos }
+
+  def moveEntry(v: V, prev: Box[A]): Unit = {
+    removeFrom(v, prev)
+    addAt(v, v.box)
+  }
 
   /// Debug info
   def depth: Int = {
@@ -139,6 +153,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     nodes
   }
 
+  private var offset: Pos[A] = Pos.zero[A](rank)
   private var bounds: Box[A] = Box(Pos.zero[A](rank), Pos.zero[A](rank))
   private val entries = mutable.LinkedHashSet.empty[V]
   private val root = Node.empty(grid = Pos.fill[A](rank, int.fromInt(1024)))

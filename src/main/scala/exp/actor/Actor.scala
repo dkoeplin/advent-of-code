@@ -4,6 +4,10 @@ import exp.World
 import exp.draw.Draw2D
 
 abstract class Actor(val id: Actor.ID, val world: World) {
+  protected var alive: Boolean = true
+
+  def isAlive: Boolean = alive
+
   override def hashCode(): Int = id.hashCode()
   override def equals(obj: Any): Boolean = obj match {
     case e: Actor => id == e.id

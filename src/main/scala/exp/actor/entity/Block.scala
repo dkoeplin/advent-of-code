@@ -5,11 +5,13 @@ import exp.World
 import exp.actor.Actor
 import exp.material.Material
 
-class Block(id: Actor.ID, world: World, parts: Parts) extends Entity(id, world, parts) {
-  def this(id: Actor.ID, world: World, vol: Box[Long], mat: Material) = this(id, world, new Parts(vol, mat))
+class Block(id: Actor.ID, world: World, _parts: Parts) extends Entity(id, world, _parts) {
+  def this(id: Actor.ID, world: World, vol: Box[Long], mat: Material)
+    = this(id, world, Parts.single(vol, mat))
+
   val material: Material = parts.iterator.next().material
 
-  override def break(groups: Iterator[Parts]): Iterator[Entity] = groups.map{group =>
+  override def break(groups: Iterable[Parts]): Iterable[Entity] = groups.map{group =>
     new Block(world.actors.nextId, world, group)
   }
 

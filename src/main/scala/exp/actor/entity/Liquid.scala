@@ -5,7 +5,7 @@ import exp.World
 import exp.actor.Actor
 
 class Liquid(id: Actor.ID, world: World, parts: Parts) extends Block(id, world, parts) {
-  def this(id: Actor.ID, world: World, vol: Box[Long], mat: exp.material.Liquid) = this(id, world, new Parts(vol, mat))
+  def this(id: Actor.ID, world: World, vol: Box[Long], mat: exp.material.Liquid) = this(id, world, Parts.single(vol, mat))
   override val material: exp.material.Liquid = iterator.next().material.asInstanceOf[exp.material.Liquid] // FIXME
   override def falls: Boolean = material.falls
 
@@ -50,7 +50,7 @@ class Liquid(id: Actor.ID, world: World, parts: Parts) extends Block(id, world, 
 
   }
 
-  override def break(groups: Iterator[Parts]): Iterator[Entity] = groups.map{group =>
+  override def break(groups: Iterable[Parts]): Iterable[Entity] = groups.map{group =>
     new Liquid(world.actors.nextId, world, group)
   }
 }

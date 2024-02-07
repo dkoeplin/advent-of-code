@@ -11,11 +11,12 @@ class Debug(world: World) extends Screen {
     Iterator(
       s"Alive: ${world.actors.entities.size}",
       s"Awake: ${world.actors.awake.size}",
-      s"Parts: ${world.actors.entities.map(_.num).sum}",
+      s"Parts: ${world.actors.entities.map(_.tree.size).sum}",
       s"Tool:  ${world.Tool.current}",
       s"Key:   ${world.prevKey.map(_.toString).getOrElse("N/A")}",
       s"Focus: ${world.view.map(_.focus.toString).getOrElse("N/A")}",
-      s"Hover: ${over.map{e => s"$e: [P: ${e.num}, D: ${e.tree.depth}, N: ${e.tree.nodes}]"}.getOrElse("N/A")}",
+      s"Hover: ${over.map{e => s"$e: [P: ${e.tree.size}, D: ${e.tree.depth}, N: ${e.tree.nodes}]"}.getOrElse("N/A")}",
+      s"Pends: ${world.Creator.pending.map{p => s"${p.tree.iterator.next().toString} @ ${p.loc}" }.getOrElse("N/A")}",
       s"Tick(curr): ${world.tickTime}ms",
       s"Tick(max): ${world.maxTickTime}ms",
       s"Msg(curr): ${world.messages.pending}",
@@ -26,9 +27,13 @@ class Debug(world: World) extends Screen {
       case e: Entity => e.borders.foreach{border => g.fillRect(border, Draw2D.kRed) }
       case _ =>
     }
-    over.foreach{e =>
-      e.tree.preorder{case (_,box,_) => box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kRed) }}
-                      {case (_,box,_) => box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kRed) }}
+    def drawTree(tree: common.mutable.RTree[Long, _]): Unit = {
+      tree.preorder{case (_,box,_) => box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kRed) }}
+                   {case (_,box,_) => box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kRed) }}
+    }
+    over match {
+      case Some(e) => drawTree(e.tree)
+      case None    => drawTree(world.actors.tree)
     }
     /*over.foreach{e =>
       e.iterator.foreach{part => part.box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kBlack) }}
