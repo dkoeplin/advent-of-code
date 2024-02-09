@@ -1,5 +1,7 @@
 package exp.actor
 
+import common.immutable.Box
+import common.traits.HasBox
 import exp.World
 import exp.draw.Draw2D
 
@@ -7,6 +9,7 @@ abstract class Actor(val id: Actor.ID, val world: World) {
   protected var alive: Boolean = true
 
   def isAlive: Boolean = alive
+  def bbox: Box[Long]
 
   override def hashCode(): Int = id.hashCode()
   override def equals(obj: Any): Boolean = obj match {
@@ -23,4 +26,5 @@ abstract class Actor(val id: Actor.ID, val world: World) {
 }
 object Actor {
   type ID = Long
+  implicit def actorHasBox[A<:Actor]: HasBox[Long, A] = _.bbox
 }

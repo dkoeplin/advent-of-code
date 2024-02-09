@@ -2,7 +2,6 @@ package exp.actor.entity
 
 import common.immutable.{Box, Pos}
 import common.mutable.RTree
-import common.traits.HasBox
 import exp.actor.Actor
 import exp.draw.Draw2D
 import exp.message.Message
@@ -125,8 +124,6 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   final protected def sleep(): Unit = { world.actors.sleep(this) }
 }
 object Entity {
-  implicit val kEntityHasBox: HasBox[Long,Entity] = _.bbox
-
   def updateVelocity(world: World, entity: Entity): Pos[Long] = {
     Pos(entity.velocity.iterator.zip(entity.accel.iterator).zipWithIndex.map{case ((vInit, a), dim) =>
       val reduce = {(a: Long, b: Long) => if (vInit >= 0) Math.min(a,b) else Math.max(a,b) }

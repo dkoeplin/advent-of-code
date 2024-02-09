@@ -11,57 +11,124 @@ import scala.collection.mutable
  */
 class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int: Integral[A], vol: HasBox[A,V]) {
   import HasBox._
+  import RTree.{clamp, floor}
   import int._
+6
+  private val kGridBase: A = int.fromInt(2)
+  private val kGridMin: A = int.fromInt(2)
 
   private type Entry = Either[Node,Set[V]]
-
-  private def floor(i: Pos[A], grid: Pos[A]): Pos[A] = (i / grid)*grid
-  private def floor(c: Box[A], grid: Pos[A]): Box[A] = Box(floor(c.min, grid), floor(c.max, grid))
-
-  private class Node(val parent: Option[(Node, Pos[A])], val map: mutable.Map[Pos[A], Entry], val grid: Pos[A]) {
-    def iterate(volume: Box[A]): Iterator[Pos[A]] = floor(volume, grid).iteratorBy(grid)
-    def update(i: Pos[A], entry: Entry): Unit = { map(i) = entry }
-    def get(i: Pos[A]): Entry = map.getOrElse(floor(i, grid), Left(Null))
-  }
-  private case object Null extends Node(None, null, null)
-  private object Node {
-    def empty(grid: Pos[A]): Node = new Node(None, mutable.HashMap.empty[Pos[A],Entry], grid)
-    def create(parent: Node, pos: Pos[A], volume: Box[A], values: Set[V]): Node = {
-      val grid: Pos[A] = parent.grid / int.fromInt(2) // values.map(_.box.shape).reduce(_ min _)
-      val map = mutable.HashMap.empty[Pos[A], Entry] ++ values.flatMap{v =>
-        v.box.intersect(volume).iterator.flatMap{ vol => floor(vol, grid).iteratorBy(grid).map{pos => pos -> v }}
-      }.groupMapReduce(_._1)(v => Right(Set(v._2)) ){(a,b) => Right(a.value ++ b.value) }
-        .filter{p => p._2.isLeft || p._2.value.nonEmpty }
+  private object Entry {
+    def increaseDepth(parent: Node, values: Set[V]): Boolean = {
+      values.size >= kMaxEntries && parent.grid.iterator.forall(_ > kGridMin)
+    }
+    private def make(parent: Node, pos: Pos[A], values: Set[V]): Node = {
+      val grid: Pos[A] = parent.grid / kGridBase
+      val range = Box(pos, pos + parent.grid - int.one) // Entire range now covered by this map
+      val map = mutable.HashMap.empty[Pos[A], Entry]
+      values.foreach{value =>
+        value.box.intersect(range).foreach{intersect => // Area of this entry overlapping with this map
+          // println(s"[B]  Iterating over ${clamp(vol, grid)} for $vol on grid $grid")
+          clamp(intersect, grid).iteratorBy(grid).foreach{spot =>
+            if (value.box.contains(spot)) {
+              val prev: Set[V] = map.getOrElse(spot, Right(Set.empty[V])).getOrElse(Set.empty[V])
+              // println(s"[B]    Adding $v at $spot")
+              map(spot) = Right(prev + value)
+            }
+          }
+        }
+      }
       new Node(Some((parent, pos)), map, grid)
+    }
+
+    def create(rootParent: Node, pos: Pos[A], values: Set[V]): Entry = if (!increaseDepth(rootParent, values)) Right(values) else {
+      case class Work(parent: Node, pos: Pos[A])
+
+      val root = make(rootParent, pos, values)
+      var worklist: List[Work] = List(Work(root, pos))
+      while (worklist.nonEmpty) {
+        val Work(parent, pos) = worklist.head
+        worklist = worklist.tail
+        parent.get(pos) match {
+          case Right(values) if increaseDepth(parent, values) =>
+            val child = make(parent, pos, values)
+            if (child.map.nonEmpty) {
+              parent(pos) = Left(child)
+              worklist = Work(parent, pos) +: worklist
+            } else {
+              parent.remove(pos)
+            }
+          case Right(_)   => // Leave this for now
+          case Left(Null) => // Nothing to do (also this shouldn't happen?)
+          case Left(node) =>
+            worklist = worklist ++ node.map.keysIterator.map{k => Work(node, k) }
+        }
+      }
+      Left(root)
     }
   }
 
-  private case class Visit(node: Node, pos: Pos[A], entries: Set[V])
-  private def traverse(v: Box[A]): List[Visit] = {
-    case class Work(node: Node, vol: Box[A])
-    Iterator.iterate((List(Work(root, v)), List.empty[Visit])){case (worklist, visits) =>
-      val Work(node, volume) = worklist.head
-      node.iterate(volume).map{v => (v, node.get(v)) }.foldLeft((worklist.tail, visits)){
-        case ((worklist, visits), entry) => entry match {
-          case (pos, Right(entries)) => (worklist, Visit(node, pos, entries) +: visits)
-          case (pos, Left(Null))     => (worklist, Visit(node, pos, Set.empty) +: visits)
-          case (pos, Left(child))    =>
-            val range = Box(pos, pos + (node.grid - int.one))
-            (v.intersect(range).map{vol => Work(child, vol)}.toList ++ worklist, visits)
+  private class Worklist {
+    def +=(node: Node): Unit = { nodes += node }
+    def cleanup(): Unit = {
+      while (nodes.nonEmpty) {
+        val node = nodes.head
+        nodes = nodes.tail
+        if (node.map.isEmpty) node.parent match {
+          case Some((parent, pos)) =>
+            parent.map.remove(pos) // Removes the current node from the tree
+            nodes += parent     // Check the parent for removal
+          case None => // Do nothing, never delete the root
         }
       }
-    }.dropWhile(_._1.nonEmpty).next()._2
+    }
+    var nodes: mutable.LinkedHashSet[Node] = mutable.LinkedHashSet.empty[Node]
+  }
+
+  private class Node(val parent: Option[(Node, Pos[A])], val map: mutable.Map[Pos[A], Entry], val grid: Pos[A]) {
+    def iterate(volume: Box[A]): Iterator[Pos[A]] = clamp(volume, grid).iteratorBy(grid)
+
+    def update(i: Pos[A], entry: Entry): Unit = entry match {
+      case Right(set) if set.isEmpty => map.remove(i)
+      case Left(Null) => map.remove(i)
+      case _ => map(i) = entry
+    }
+
+    def get(i: Pos[A]): Entry = map.getOrElse(floor(i, grid), Left(Null))
+
+    def remove(i: Pos[A]): Unit = map.remove(i)
+  }
+
+  private case object Null extends Node(None, null, null)
+  private object Node {
+    def empty(grid: Pos[A]): Node = new Node(None, mutable.HashMap.empty[Pos[A],Entry], grid)
+  }
+
+  private case class Visit(node: Node, pos: Pos[A], entries: Set[V])
+  private def traverse(v: Box[A])(func: (Node, Pos[A], Set[V]) => Unit): Unit = {
+    case class Work(node: Node, vol: Box[A])
+    var worklist: List[Work] = List(Work(root, v))
+    while (worklist.nonEmpty) {
+      val Work(node, volume) = worklist.head
+      worklist = worklist.tail
+      // println(s"[T] Iterating on grid ${node.grid} over $volume")
+      node.iterate(volume).map{pos => (pos, node.get(pos)) }.foreach{
+        case (pos, Right(entries)) => func(node, pos, entries)
+        case (pos, Left(Null))     => func(node, pos, Set.empty)
+        case (pos, Left(child))    =>
+          val range = Box(pos, pos + node.grid - int.one)
+          // println(s"[T]  Iterating over child range $range - ${v.intersect(range)}")
+          worklist = worklist ++ v.intersect(range).map{vol => Work(child, vol) }
+      }
+    }
   }
 
   private def addAt(v: V, box: Box[A]): Unit = {
-    bounds = bounds union box
-    traverse(box).foreach{case Visit(node, pos, entries) =>
-      if (entries.size + 1 < kMaxEntries || node.grid.iterator.exists(_ <= int.fromInt(2))) {
-        node(pos) = Right(entries + v)
-      } else {
-        val range = Box(pos, pos + (node.grid - int.one))
-        node(pos) = Left(Node.create(node, pos, range, entries + v))
-      }
+    // println(s"---\nAdding $v")
+    bounds = Some(bounds.map(_ union box).getOrElse(box))
+    traverse(box){(node, pos, entries) =>
+      // println(s"Adding $v to grid ${node.grid} at $pos")
+      node(pos) = Entry.create(node, pos, entries + v)
     }
   }
 
@@ -71,8 +138,8 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   private def removeFrom(v: V, box: Box[A]): Unit = {
-    var worklist = mutable.LinkedHashSet.empty[Node]
-    traverse(box).foreach{case Visit(node, pos, entries) =>
+    val worklist = new Worklist
+    traverse(box){(node, pos, entries) =>
       if (entries.size == 1) {
         node.map.remove(pos)
         if (node.map.isEmpty)
@@ -81,16 +148,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
         node(pos) = Right(entries - v)
       }
     }
-    while (worklist.nonEmpty) {
-      val node = worklist.head
-      worklist = worklist.tail
-      if (node.map.isEmpty) node.parent match {
-        case Some((parent, pos)) =>
-          parent.map.remove(pos) // Removes the current node from the tree
-          worklist += parent     // Check the parent for removal
-        case None => // Do nothing, never delete the root
-      }
-    }
+    worklist.cleanup()
   }
 
   private def remove(v: V): Unit = {
@@ -105,6 +163,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
       val (depth, current) = worklist.pop()
       val pos: Pos[A] = current.parent.map(_._2).getOrElse(Pos.zero[A](rank))
       val end: Pos[A] = pos + current.parent.map(_._1.grid).getOrElse(Pos.zero[A](rank)) - int.one
+      if (current.map.isEmpty) println(s"${"  "*depth} EMPTY MAP")
       if (depth > 0) preorder(depth, Box(pos, end), current.grid)
       current.map.foreach {
         case (k, Left(child)) => worklist += ((depth + 1, child))
@@ -117,7 +176,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def iterate(func: (Int, Box[A], Set[V]) => Unit): Unit = preorder{(_,_,_) => ()}(func)
 
   def dump(): Unit = preorder{case (lvl, box, gd) => println(s"${"  "*lvl}$box: Grid $gd") }
-                             {case (lvl, box, vs) => println(s"${"  "*(lvl + 1)}$box: ${entries.mkString(", ")}") }
+                             {case (lvl, box, vs) => println(s"${"  "*(lvl + 1)}$box: ${vs.mkString(", ")}") }
 
   def +=(v: V): Unit = add(v)
   def ++=(v: IterableOnce[V]): Unit = v.iterator.foreach(add)
@@ -125,12 +184,16 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def -=(v: V): Unit = remove(v)
   def --=(v: IterableOnce[V]): Unit = v.iterator.foreach(remove)
 
-  def apply(i: Box[A]): List[V] = traverse(i - offset).flatMap(_.entries)
-  def apply(i: Pos[A]): List[V] = traverse(Box(i, i) - offset).flatMap(_.entries)
+  def apply(i: Box[A]): Set[V] = {
+    val set = mutable.LinkedHashSet.empty[V]
+    traverse(i - offset){(_, _, entries) => set ++= entries }
+    set.toSet
+  }
+  def apply(i: Pos[A]): Set[V] = apply(Box(i, i))
 
-  def loc: Pos[A] = bounds.min + offset
-  def bbox: Box[A] = bounds + offset
-  def shape: Pos[A] = bounds.shape
+  def loc: Pos[A] = offset
+  def bbox: Box[A] = bounds.getOrElse(Box.unit(Pos.zero[A](rank))) + offset
+  def shape: Pos[A] = bounds.map(_.shape).getOrElse(Pos.zero[A](rank))
   def size: Int = entries.size
   def iterator: Iterator[V] = entries.iterator
   def move(delta: Pos[A]): Unit = { offset += delta }
@@ -154,7 +217,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   private var offset: Pos[A] = Pos.zero[A](rank)
-  private var bounds: Box[A] = Box(Pos.zero[A](rank), Pos.zero[A](rank))
+  private var bounds: Option[Box[A]] = None
   private val entries = mutable.LinkedHashSet.empty[V]
   private val root = Node.empty(grid = Pos.fill[A](rank, int.fromInt(1024)))
 }
@@ -170,4 +233,8 @@ object RTree {
     tree += entry
     tree
   }
+
+  def ceil[A:Integral](i: Pos[A], grid: Pos[A]): Pos[A] = ((i + grid)/grid)*grid
+  def floor[A:Integral](i: Pos[A], grid: Pos[A]): Pos[A] = (i / grid)*grid
+  def clamp[A:Integral](c: Box[A], grid: Pos[A]): Box[A] = Box(floor(c.min, grid), ceil(c.max, grid) - implicitly[Integral[A]].one)
 }

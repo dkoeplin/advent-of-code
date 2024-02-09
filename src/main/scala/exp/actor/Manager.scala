@@ -21,13 +21,13 @@ class Manager {
   // Awake - active tick()
   private val awakeList: mutable.LinkedHashSet[Actor] = mutable.LinkedHashSet.empty
   // Visible animations
-  private val animationList: mutable.LinkedHashSet[Animation] = mutable.LinkedHashSet.empty
+  private val animations: RTree[Long, Actor] = RTree.empty[Long, Actor](2)
 
   // DEBUG
   def tree: RTree[Long, Entity] = entityTree
 
   def entities: Iterator[Entity] = entityTree.iterator
-  def visible: Iterator[Actor] = entityTree.iterator ++ animationList.iterator
+  def visible(area: Box[Long]): Iterable[Actor] = entityTree(area) ++ animations(area)
   def awake: Iterator[Actor] = awakeList.iterator
 
   def nextId: Actor.ID = { id += 1; id }
@@ -36,8 +36,8 @@ class Manager {
   def +=(e: Entity): Unit = if (e.isAlive) { entityTree += e; awakeList.add(e) }
   def ++=(es: IterableOnce[Entity]): Unit = es.iterator.filter(_.isAlive).foreach{e => this += e }
 
-  def -=(a: Animation): Unit = { awakeList.remove(a); animationList.remove(a) }
-  def +=(a: Animation): Unit = if (a.isAlive) { awakeList.add(a); animationList.add(a) }
+  def -=(a: Animation): Unit = { awakeList.remove(a); animations -= a }
+  def +=(a: Animation): Unit = if (a.isAlive) { awakeList.add(a); animations += a }
 
   def near(x: Box[Long]): Iterator[Entity] = entityTree(x).iterator
   def nearExcept(x: Box[Long], e: Entity): Iterator[Entity] = near(x).filterNot(_ == e)

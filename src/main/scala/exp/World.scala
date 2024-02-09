@@ -46,9 +46,9 @@ class World(val parent: Exp.Main) extends Component {
     view = Some(new draw.View2D(this))
   }
 
-  override def paint(g: scala.swing.Graphics2D): Unit = {
-    val painter = new draw.Draw2D(g, view.get)
-    actors.visible.foreach(_.draw(painter))
+  override def paint(g: scala.swing.Graphics2D): Unit = view.foreach{v =>
+    val painter = new draw.Draw2D(g, v)
+    actors/*.visible(v.range)*/.entities.foreach(_.draw(painter))
     /*val windowSize = Cube(Pos(0,0), parent.windowSize)
     windowSize.iteratorBy(20).iterator.foreach{p =>
       entities.findVolume(p).foreach{part =>
@@ -59,11 +59,11 @@ class World(val parent: Exp.Main) extends Component {
 
     Tool.current.draw(painter)
     children.foreach(_.draw(painter))
-    view.foreach{v =>
-      g.setColor(new Color(25, 25, 25))
-      g.drawLine(v.center.x - 10, v.center.y, v.center.x + 10, v.center.y)
-      g.drawLine(v.center.x, v.center.y - 10, v.center.x, v.center.y + 10)
-    }
+
+    // Crosshair
+    g.setColor(new Color(25, 25, 25))
+    g.drawLine(v.center.x - 10, v.center.y, v.center.x + 10, v.center.y)
+    g.drawLine(v.center.x, v.center.y - 10, v.center.x, v.center.y + 10)
   }
 
   abstract class Tool {
@@ -118,7 +118,7 @@ class World(val parent: Exp.Main) extends Component {
   }
   case object Breaker extends Tool {
     private val color = new Color(255, 0, 0, 32)
-    private var pending: mutable.Map[Entity, Set[Box[Long]]] = mutable.Map.empty
+    private val pending: mutable.Map[Entity, Set[Box[Long]]] = mutable.Map.empty
     override def tick(): Unit = {
       pending.foreach{case (entity, rms) => rms.foreach{rm =>
         world.messages.send(new message.Hit(null, rm, strength=1), entity)
@@ -129,8 +129,6 @@ class World(val parent: Exp.Main) extends Component {
     def down(pt: Pos[Long]): Unit = {
       val rm = Box(pt - 20, pt + 20)
       world.actors.get(rm).foreach{e => pending(e) = pending.getOrElse(e, Set.empty) + rm }
-      // world.messages.broadcast(new message.Hit(null, rm, strength=1), world.actors.get(rm))
-      // cooldown = kMaxCooldown
     }
     def move(pt: Pos[Long]): Unit = { }
     def drag(pt: Pos[Long]): Unit = if (cooldown == 0) {
@@ -162,8 +160,7 @@ class World(val parent: Exp.Main) extends Component {
       children = if (debug.isEmpty) children + new screen.Debug(this) else children - debug.get
 
     case KeyPressed(_, Key.D, _, _) =>
-      val hover = view.flatMap{v => actors.find(v.focus)}
-      hover.foreach{e => e.tree.dump() }
+      actors.entities.foreach{e => println(s"${e.id}: ${e.bbox} @ ${e.loc}") }
 
     case KeyReleased(_, key, _, _) => prevKey = Some(key)
 
