@@ -28,6 +28,9 @@ class Pos[T](private val indices: List[T])(implicit num: Numeric[T]) {
   def r: T = getOrElse(rank - 2, num.fromInt(1))
   def c: T = getOrElse(rank - 1, num.fromInt(1))
 
+  def map[R:Numeric](func: T => R): Pos[R] = Pos(iterator.map(func))
+  def zip[R:Numeric](rhs: Pos[T])(func: (T,T) => R): Pos[R] = Pos(iterator.zip(rhs.iterator).map{case (a,b) => func(a,b) })
+
   def +(rhs: T): Pos[T] = Pos(iterator.map{x => x + rhs})
   def -(rhs: T): Pos[T] = Pos(iterator.map{x => x - rhs})
   def *(rhs: T): Pos[T] = Pos(iterator.map{x => x * rhs})

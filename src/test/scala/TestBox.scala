@@ -24,7 +24,7 @@ class TestBox extends AnyFlatSpec with should.Matchers {
 
   "Box" should "iterateBy" in {
     val v = Box(Pos(0,0,0), Pos(2,2,2))
-    val pts = v.iteratorBy(Pos(2,2,2)).toList
+    val pts = v.posIterator(Pos(2,2,2)).toList
     pts.size should be (1)
     pts should be (List(Pos(0,0,0)))
   }

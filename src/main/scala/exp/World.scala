@@ -23,6 +23,7 @@ class World(val parent: Exp.Main) extends Component {
   private var children: Set[Screen] = Set.empty
   var view: Option[draw.View2D] = None
   var prevKey: Option[Key.Value] = None
+  val log = new java.io.FileWriter(new java.io.File("log/log"))
 
   def gravity: Long = 3       // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
   def terminal: Long = 1500   // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
@@ -30,6 +31,7 @@ class World(val parent: Exp.Main) extends Component {
   val clock: java.util.TimerTask = new TimerTask { override def run(): Unit = tick() }
   var tickTime: Long = 0
   var maxTickTime: Long = 0
+  var prevActive: Int = 0
   def tick(): Unit = {
     val start = System.nanoTime()
     actors.awake.foreach(_.tick())
@@ -37,6 +39,12 @@ class World(val parent: Exp.Main) extends Component {
     Tool.current.tick()
     tickTime = (end - start) / 1000000
     maxTickTime = Math.max(maxTickTime, tickTime)
+
+    if (prevActive > 0 && actors.awake.isEmpty) {
+      println("--------------------")
+      actors.entities.foreach{e => println(s"(${e.bbox} + ${e.loc}) named ${e.id}") }
+    }
+    prevActive = actors.awake.size
   }
 
   def load(): Unit = {
@@ -48,7 +56,7 @@ class World(val parent: Exp.Main) extends Component {
 
   override def paint(g: scala.swing.Graphics2D): Unit = view.foreach{v =>
     val painter = new draw.Draw2D(g, v)
-    actors/*.visible(v.range)*/.entities.foreach(_.draw(painter))
+    actors.visible(v.range).foreach(_.draw(painter))
     /*val windowSize = Cube(Pos(0,0), parent.windowSize)
     windowSize.iteratorBy(20).iterator.foreach{p =>
       entities.findVolume(p).foreach{part =>
@@ -99,9 +107,18 @@ class World(val parent: Exp.Main) extends Component {
         pending = Some(new Block(pending.get.id, world, box, pending.get.material))
     }
     def up(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
+      // actors.tree.dump{str => log.write(s"$str\n") }
+      // log.write(s"+${pending.get}\n")
+
+      println(s"Created (${pending.get.bbox} + ${pending.get.loc}) named ${pending.get.id}")
+
       actors += pending.get
       pending = None
       init = None
+
+      // actors.tree.dump{str => log.write(s"$str\n") }
+      // log.write("------------------\n")
+      // log.flush()
     }
   }
   case object Remover extends Tool {
@@ -161,6 +178,7 @@ class World(val parent: Exp.Main) extends Component {
 
     case KeyPressed(_, Key.D, _, _) =>
       actors.entities.foreach{e => println(s"${e.id}: ${e.bbox} @ ${e.loc}") }
+      actors.tree.dump()
 
     case KeyReleased(_, key, _, _) => prevKey = Some(key)
 

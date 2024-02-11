@@ -53,7 +53,9 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     velocity = Entity.updateVelocity(world, this)
 
     // Check for and notify neighbors before moving
-    if (velocity.magnitude == 0) {
+    if (bbox.max.apply(1) > 10000) {
+      die()
+    } else if (velocity.magnitude == 0) {
       sleep()
     } else if (initialVelocity.magnitude == 0) {
       world.messages.broadcast(new message.Move(this), to=above)

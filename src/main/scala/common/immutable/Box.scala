@@ -37,11 +37,14 @@ class Box[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vol
     = zipped(min.iterator, max.iterator, rhs.min.iterator, rhs.max.iterator)
     .forall{case Seq(aMin, aMax, bMin, bMax) => bMin <= aMax && bMax >= aMin }
 
-  def iterator(implicit int: Integral[T]): Iterator[Pos[T]] = Box.anyIterator(this, reverse = false, Pos.fill(rank, int.one))
-  def reverseIterator(implicit int: Integral[T]): Iterator[Pos[T]] = Box.anyIterator(this, reverse = true, Pos.fill(rank, int.one))
+  def iterator(implicit int: Integral[T]): Iterator[Pos[T]] = Box.posIterator(this, reverse = false, Pos.fill(rank, int.one))
+  def reverseIterator(implicit int: Integral[T]): Iterator[Pos[T]] = Box.posIterator(this, reverse = true, Pos.fill(rank, int.one))
 
-  def iteratorBy(step: T)(implicit int: Integral[T]): Iterator[Pos[T]] = Box.anyIterator(this, reverse = false, by = Pos.fill(rank, step))
-  def iteratorBy(step: Pos[T])(implicit int: Integral[T]): Iterator[Pos[T]] = Box.anyIterator(this, reverse = false, step)
+  def posIterator(step: T)(implicit int: Integral[T]): Iterator[Pos[T]] = Box.posIterator(this, reverse = false, by = Pos.fill(rank, step))
+  def posIterator(step: Pos[T])(implicit int: Integral[T]): Iterator[Pos[T]] = Box.posIterator(this, reverse = false, step)
+
+  def boxIterator(step: T)(implicit int: Integral[T]): Iterator[Box[T]] = Box.boxIterator(this, reverse = false, by = Pos.fill(rank, step))
+  def boxIterator(step: Pos[T])(implicit int: Integral[T]): Iterator[Box[T]] = Box.boxIterator(this, reverse = false, step)
 
   def union(rhs: Box[T]): Box[T] = Box(min.min(rhs.min), max.max(rhs.max))
   def moveTo(dim: Int, pos: T): Box[T] = {
@@ -118,7 +121,7 @@ class Box[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vol
 }
 
 object Box {
-  private def anyIterator[T](volume: Box[T], reverse: Boolean, by: Pos[T])(implicit int: Integral[T]): Iterator[Pos[T]] = {
+  private def posIterator[T](volume: Box[T], reverse: Boolean, by: Pos[T])(implicit int: Integral[T]): Iterator[Pos[T]] = {
     zipped(volume.min.iterator, volume.max.iterator, by.iterator).foldLeft(Iterator.empty[Seq[T]]){case (iters, Seq(min, max, by)) =>
       val start: T = if (reverse) max else min
       val end: T = if (reverse) min else max
@@ -127,6 +130,9 @@ object Box {
       if (!iters.hasNext) range.iterator.map(Seq.apply(_)) else iters.flatMap{idx => range.iterator.map{x => idx :+ x }}
     }.map(_.iterator).map{seq => Pos[T](seq) }
   }
+
+  private def boxIterator[T](volume: Box[T], reverse: Boolean, by: Pos[T])(implicit int: Integral[T]): Iterator[Box[T]]
+    = posIterator(volume, reverse, by).map{pos => Box(pos, pos + by - int.one) }
 
   private def deltas(rank: Int): Iterator[Pos[Int]]
     = Box(Pos.fill(rank, -1), Pos.fill(rank, 1)).iterator.filterNot(_.iterator.forall(_ == 0))

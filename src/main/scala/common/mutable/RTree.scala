@@ -11,7 +11,7 @@ import scala.collection.mutable
  */
 class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int: Integral[A], vol: HasBox[A,V]) {
   import HasBox._
-  import RTree.{clamp, floor}
+  import RTree.{clamp, clampDown}
   import int._
 6
   private val kGridBase: A = int.fromInt(2)
@@ -29,11 +29,11 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
       values.foreach{value =>
         value.box.intersect(range).foreach{intersect => // Area of this entry overlapping with this map
           // println(s"[B]  Iterating over ${clamp(vol, grid)} for $vol on grid $grid")
-          clamp(intersect, grid).iteratorBy(grid).foreach{spot =>
-            if (value.box.contains(spot)) {
-              val prev: Set[V] = map.getOrElse(spot, Right(Set.empty[V])).getOrElse(Set.empty[V])
+          clamp(intersect, grid).boxIterator(grid).foreach{range =>
+            if (range.overlaps(value.box)) {
+              val prev: Set[V] = map.getOrElse(range.min, Right(Set.empty[V])).getOrElse(Set.empty[V])
               // println(s"[B]    Adding $v at $spot")
-              map(spot) = Right(prev + value)
+              map(range.min) = Right(prev + value)
             }
           }
         }
@@ -86,7 +86,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   private class Node(val parent: Option[(Node, Pos[A])], val map: mutable.Map[Pos[A], Entry], val grid: Pos[A]) {
-    def iterate(volume: Box[A]): Iterator[Pos[A]] = clamp(volume, grid).iteratorBy(grid)
+    def iterate(volume: Box[A]): Iterator[Pos[A]] = clamp(volume, grid).posIterator(grid)
 
     def update(i: Pos[A], entry: Entry): Unit = entry match {
       case Right(set) if set.isEmpty => map.remove(i)
@@ -94,17 +94,15 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
       case _ => map(i) = entry
     }
 
-    def get(i: Pos[A]): Entry = map.getOrElse(floor(i, grid), Left(Null))
+    def get(i: Pos[A]): Entry = map.getOrElse(clampDown(i, grid), Left(Null))
 
     def remove(i: Pos[A]): Unit = map.remove(i)
   }
-
   private case object Null extends Node(None, null, null)
   private object Node {
     def empty(grid: Pos[A]): Node = new Node(None, mutable.HashMap.empty[Pos[A],Entry], grid)
   }
 
-  private case class Visit(node: Node, pos: Pos[A], entries: Set[V])
   private def traverse(v: Box[A])(func: (Node, Pos[A], Set[V]) => Unit): Unit = {
     case class Work(node: Node, vol: Box[A])
     var worklist: List[Work] = List(Work(root, v))
@@ -175,8 +173,9 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
   def iterate(func: (Int, Box[A], Set[V]) => Unit): Unit = preorder{(_,_,_) => ()}(func)
 
-  def dump(): Unit = preorder{case (lvl, box, gd) => println(s"${"  "*lvl}$box: Grid $gd") }
-                             {case (lvl, box, vs) => println(s"${"  "*(lvl + 1)}$box: ${vs.mkString(", ")}") }
+  def dump(out: String => Unit = println): Unit
+    = preorder{case (lvl, box, gd) => out(s"${"  "*lvl}$box: Grid $gd") }
+              {case (lvl, box, vs) => out(s"${"  "*(lvl + 1)}$box: ${vs.mkString(", ")}") }
 
   def +=(v: V): Unit = add(v)
   def ++=(v: IterableOnce[V]): Unit = v.iterator.foreach(add)
@@ -200,8 +199,8 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def moveto(pos: Pos[A]): Unit = { offset = pos }
 
   def moveEntry(v: V, prev: Box[A]): Unit = {
-    removeFrom(v, prev)
-    addAt(v, v.box)
+    (prev diff v.box).foreach{box => removeFrom(v, box) }
+    (v.box diff prev).foreach{box => addAt(v, box) }
   }
 
   /// Debug info
@@ -234,7 +233,16 @@ object RTree {
     tree
   }
 
-  def ceil[A:Integral](i: Pos[A], grid: Pos[A]): Pos[A] = ((i + grid)/grid)*grid
-  def floor[A:Integral](i: Pos[A], grid: Pos[A]): Pos[A] = (i / grid)*grid
-  def clamp[A:Integral](c: Box[A], grid: Pos[A]): Box[A] = Box(floor(c.min, grid), ceil(c.max, grid) - implicitly[Integral[A]].one)
+  def clampUp[A](i: A, grid: A)(implicit int: Integral[A]): A = {
+    import int._
+    if (int.lt(i, int.zero)) (i/grid)*grid - int.one else ((i + grid)/grid)*grid - int.one
+  }
+  def clampDown[A](i: A, grid: A)(implicit int: Integral[A]): A = {
+    import int._
+    if (int.lt(i, int.zero)) ((i - grid) / grid)*grid else (i / grid)*grid
+  }
+
+  def clampUp[A:Integral](i: Pos[A], grid: Pos[A]): Pos[A] = i.zip(grid){(a,b) => clampUp(a,b) }
+  def clampDown[A:Integral](i: Pos[A], grid: Pos[A]): Pos[A] = i.zip(grid){(a,b) => clampDown(a,b) }
+  def clamp[A:Integral](c: Box[A], grid: Pos[A]): Box[A] = Box(clampDown(c.min, grid), clampUp(c.max, grid))
 }
