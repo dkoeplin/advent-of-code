@@ -23,6 +23,11 @@ class TestRTree extends AnyFlatSpec with should.Matchers {
     map.toMap
   }
 
+  "RTree" should "clampDown" in {
+    import RTree.clampDown
+    clampDown(Pos(0, -1024), Pos(1024, 1024)) should be (Pos(0, -1024))
+  }
+
   "RTree" should "clamp" in {
     import RTree.clamp
     clamp((0, 0) to (511, 511), Pos(1024, 1024)) should be ((0,0) to (1023,1023))
@@ -104,5 +109,17 @@ class TestRTree extends AnyFlatSpec with should.Matchers {
       ((1024, 0) to (2047, 1023)) -> Set(1),
       ((0, 0) to (1023, 1023)) -> Set(1)
     ))
+  }
+
+  "RTree" should "fetch" in {
+    val tree = RTree.empty[Int,LabeledBox](rank=2, maxEntries=10)
+    val a = (((0, 882) to (1512, 982)) + (0, 0)) named 1
+    val b = (((346, -398) to (666, -202)) + (0, 0)) named 2
+    tree += a
+    tree += b
+
+    tree((0, -300) to (1024, 1000)) should be (Set(a, b))
+    tree((0, 0) to (100, 100)) should be (Set.empty)
+    tree((0, 885) to (100, 886)) should be (Set(a))
   }
 }
