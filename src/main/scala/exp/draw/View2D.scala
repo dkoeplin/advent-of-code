@@ -1,14 +1,14 @@
 package exp.draw
 
 import common.immutable.{Box, Pos}
-import exp.World
+import exp.Exp
 
-class View2D(world: World) {
-  private val _robot: java.awt.Robot = new java.awt.Robot(world.parent.device)
-  private var _focus: Pos[Long] = world.parent.windowSize.toLongs / 2L
+class View2D(exp: Exp.Main) {
+  private val _robot: java.awt.Robot = new java.awt.Robot(exp.device)
+  private var _focus: Pos[Long] = exp.windowSize.toLongs / 2L
 
-  private def offset: Pos[Int] = world.parent.peer.getLocationOnScreen
-  def center: Pos[Int] = world.parent.windowSize / 2
+  private def offset: Pos[Int] = exp.peer.getLocationOnScreen
+  def center: Pos[Int] = exp.windowSize / 2
 
   def focus: Pos[Long] = _focus
   def range: Box[Long] = {

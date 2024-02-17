@@ -91,6 +91,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
 
   private class Worklist {
     def +=(node: Node): Unit = { nodes += node }
+    def ++=(node: Option[Node]): Unit = { nodes ++= node }
     def cleanup(): Unit = {
       while (nodes.nonEmpty) {
         val node = nodes.head
@@ -171,17 +172,19 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     addAt(v, v.box)
   }
 
+  private def removeAt(v: V, node: Node, pos: Pos[A], entries: Set[V]): Option[Node] = {
+    if (entries.size == 1) {
+      node.map.remove(pos)
+      if (node.map.isEmpty) Some(node) else None
+    } else {
+      node(pos) = Right(entries - v)
+      None
+    }
+  }
+
   private def removeFrom(v: V, box: Box[A]): Unit = {
     val worklist = new Worklist
-    traverseDefined(box){(node, pos, entries) =>
-      if (entries.size == 1) {
-        node.map.remove(pos)
-        if (node.map.isEmpty)
-          worklist += node
-      } else {
-        node(pos) = Right(entries - v)
-      }
-    }
+    traverseDefined(box){(node, pos, entries) => worklist ++= removeAt(v, node, pos, entries) }
     worklist.cleanup()
   }
 
@@ -219,8 +222,15 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def moveto(pos: Pos[A]): Unit = { offset = pos }
 
   def moveEntry(v: V, prev: Box[A]): Unit = {
-    (prev diff v.box).foreach{box => removeFrom(v, box) }
+    val worklist = new Worklist
+    (prev diff v.box).foreach{box =>
+      traverseDefined(box){(node, pos, entries) =>
+        val grid = Box(pos, pos + node.grid - int.one)
+        if (!v.box.overlaps(grid)) worklist ++= removeAt(v, node, pos, entries)
+      }
+    }
     (v.box diff prev).foreach{box => addAt(v, box) }
+    worklist.cleanup()
   }
 
   /// Debug info

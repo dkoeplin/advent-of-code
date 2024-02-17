@@ -5,13 +5,12 @@ import exp.actor.entity.{Block, Entity}
 import exp.draw.Draw2D
 import exp.screen.Screen
 
-import java.util.TimerTask
 import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.swing._
 import scala.swing.event._
 
-class World(val parent: Exp.Main) extends Component {
+class World extends Component {
   def world: World = this
   focusable = true
   listenTo(mouse.clicks)
@@ -28,10 +27,10 @@ class World(val parent: Exp.Main) extends Component {
   def gravity: Long = 3       // px / tick^2: (10 m/s^2) * (1000 px/m) * (1 ms /1000 s)^2 * (50 ms / tick)^2
   def terminal: Long = 1500   // px / tick    (50 m/s) * (1 s / 1000 ms) * (30 ms / tick) * (1000 px/m)
 
-  val clock: java.util.TimerTask = new TimerTask { override def run(): Unit = tick() }
   var tickTime: Long = 0
   var maxTickTime: Long = 0
   var prevActive: Int = 0
+  var time: Long = 0
   def tick(): Unit = {
     val start = System.nanoTime()
     actors.awake.foreach(_.tick())
@@ -41,18 +40,21 @@ class World(val parent: Exp.Main) extends Component {
     maxTickTime = Math.max(maxTickTime, tickTime)
 
     if (prevActive > 0 && actors.awake.isEmpty) {
-      println("--------------------")
-      actors.entities.foreach{e => println(s"(${e.bbox} + ${e.loc}) named ${e.id}") }
+      log.write("---------\n")
+      actors.entities.foreach{e => log.write(s"(${e.bbox} + ${e.loc}) named ${e.id}\n") }
+      actors.tree.dump()
+      log.flush()
     }
     prevActive = actors.awake.size
+    time += 1
   }
 
-  def load(): Unit = {
-    val windowSize = parent.windowSize
-    val bottom = Box(Pos(0, windowSize.y - 100), windowSize).toLongs
+  def reset(windowSize: Pos[Long]): Unit = {
+    val bottom = Box(Pos(0, windowSize.y - 100), windowSize)
     actors += new Block(actors.nextId, this, bottom, material.Bedrock)
-    view = Some(new draw.View2D(this))
   }
+
+  def setView(v: draw.View2D): Unit = { view = Some(v) }
 
   override def paint(g: scala.swing.Graphics2D): Unit = view.foreach{v =>
     val painter = new draw.Draw2D(g, v)
@@ -106,11 +108,10 @@ class World(val parent: Exp.Main) extends Component {
       if (c.isEmpty)
         pending = Some(new Block(pending.get.id, world, box, pending.get.material))
     }
-    def up(pt: Pos[Long]): Unit = if (pending.nonEmpty) {
+    def up(pt: Pos[Long]): Unit = pending.foreach{p =>
       // actors.tree.dump{str => log.write(s"$str\n") }
-      // log.write(s"+${pending.get}\n")
-
-      println(s"Created (${pending.get.bbox} + ${pending.get.loc}) named ${pending.get.id}")
+      log.write(s"$time: (${p.bbox} + ${p.loc}) named ${p.id}\n")
+      log.flush()
 
       actors += pending.get
       pending = None

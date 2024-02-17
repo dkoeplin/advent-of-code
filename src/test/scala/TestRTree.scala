@@ -58,6 +58,14 @@ class TestRTree extends AnyFlatSpec with should.Matchers {
     ))
   }
 
+  "RTree" should "create new bucket" in {
+    val tree = RTree.empty[Int,LabeledBox](rank=2, maxEntries=10)
+    tree += (((0, 882) to (1512, 982)) + (0, 0)) named 1
+    tree += (((485, 211) to (762, 881)) + (0, 78)) named 2
+    tree += (((527, -173) to (748, 210)) + (0, 125)) named 3
+    tree.dump()
+  }
+
   "RTree" should "bucket" in {
     val tree = RTree.empty[Int,LabeledBox](rank=2, maxEntries=10)
     tree += (0, 0) to (1512, 982) named 1
