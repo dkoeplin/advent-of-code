@@ -16,7 +16,6 @@ import scala.collection.mutable
 class Manager {
   private var id: Actor.ID = 0
   // Entities - can be interacted with
-  // private val entityList: mutable.LinkedHashSet[Entity] = mutable.LinkedHashSet.empty
   private val entityTree: RTree[Long, Entity] = RTree.empty[Long, Entity](2)
   // Awake - active tick()
   private val awakeList: mutable.LinkedHashSet[Actor] = mutable.LinkedHashSet.empty

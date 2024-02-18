@@ -173,8 +173,6 @@ class World extends Component {
     case KeyPressed(_, Key.T, _, _) => Tool.next()
     case KeyPressed(_, Key.C, _, _) => view.foreach(_.recenter())
 
-    // case KeyReleased(_, Key.Tab, _, _) if children.exists(_.isInstanceOf[window.Selection]) =>
-
     case KeyPressed(_, Key.B, _, _) =>
       val debug = children.find(_.isInstanceOf[screen.Debug])
       children = if (debug.isEmpty) children + new screen.Debug(this) else children - debug.get
@@ -187,7 +185,6 @@ class World extends Component {
 
     case MousePressed(_, pt, _, _, _)  => view.map(_.move(pt).focus).foreach(Tool.current.down)
     case MouseReleased(_, pt, _, _, _) => view.map(_.move(pt).focus).foreach(Tool.current.up)
-    // case MouseExited(_, pt, _) => Tool.current.exit(pt)
     case MouseDragged(_, pt, _) => view.map(_.move(pt).focus).foreach(Tool.current.drag)
     case MouseMoved(_, pt, _) => view.map(_.move(pt).focus).foreach(Tool.current.move)
   }
