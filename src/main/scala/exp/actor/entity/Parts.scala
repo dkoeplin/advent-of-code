@@ -2,7 +2,7 @@ package exp.actor.entity
 
 import common.immutable.{Border, Box, Pos}
 import common.mutable.RTree
-import common.traits.HasBox
+import common.traits.RTreeHash
 import exp.World
 import exp.draw.Draw2D
 import exp.material.Material
@@ -59,7 +59,10 @@ object Parts {
     override def toString: String = box.toString
   }
   protected object PartView {
-    implicit val PartHasBox: HasBox[Long,PartView] = _.box
+    implicit val PartHasBox: RTreeHash[Long,PartView] = new RTreeHash[Long,PartView] {
+      override def hash(value: PartView): Long = value.hashCode().toLong
+      override def box(value: PartView): Box[Long] = value.box
+    }
   }
 
   private implicit class PartOps(part: Part) {

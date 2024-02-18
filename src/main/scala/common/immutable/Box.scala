@@ -30,7 +30,7 @@ class Box[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vol
   def +(rhs: Pos[T]): Box[T] = Box(min + rhs, max + rhs)
   def -(rhs: Pos[T]): Box[T] = Box(min - rhs, max - rhs)
 
-  def *(rhs: T): Box[T] = Box(min, max * rhs) // TODO: Both?
+  def *(rhs: T): Box[T] = Box(min * rhs, max * rhs)
   def *(rhs: Pos[T]): Box[T] = Box(min * rhs, max * rhs)
 
   def overlaps(rhs: Box[T]): Boolean

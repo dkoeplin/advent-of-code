@@ -11,6 +11,8 @@ class Manager {
   var maxPending: Int = 0
   private val queues: mutable.HashMap[Actor.ID, List[Message]] = mutable.HashMap.empty
 
+  def clear(id: Actor.ID): Unit = queues.remove(id)
+
   def send(message: Message, dest: Entity): Unit = if (dest.isAlive) {
     pending += 1
     maxPending = Math.max(pending, maxPending)

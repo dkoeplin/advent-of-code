@@ -45,40 +45,42 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   def contains(rhs: Pos[Long]): Boolean = iterator.exists(_.box.contains(rhs))
   def at(rhs: Pos[Long]): Option[Part] = iterator.find(_.box.contains(rhs))
 
-  override def tick(): Unit = if (alive) {
-    if (!receiveAll()) // Get all messages first
-      return // End early if we died
-
-    val initialVelocity = velocity
-    velocity = Entity.updateVelocity(world, this)
-
-    // Check for and notify neighbors before moving
-    if (bbox.max.apply(1) > 10000) {
+  override def tick(): Unit = if (isAlive) {
+    val nextStatus = receiveAll()    // Get all messages first
+    if (nextStatus == Status.Dead) { // End early if died
       die()
-    } else if (velocity.magnitude == 0) {
-      sleep()
-    } else if (initialVelocity.magnitude == 0) {
-      world.messages.broadcast(new message.Move(this), to=above)
-    }
+    } else {
+      val initialVelocity = velocity
+      velocity = Entity.updateVelocity(world, this)
 
-    move(velocity)
+      // Check for and notify neighbors before moving
+      if (bbox.max.apply(1) > 10000) {
+        die()
+      } else if (velocity.magnitude == 0) {
+        if (nextStatus != Status.Wake) sleep()
+      } else if (initialVelocity.magnitude == 0) {
+        world.messages.broadcast(new message.Move(this), to=above)
+      }
+      move(velocity)
+    }
   }
 
-  final protected def receiveAll(): Boolean = {
+  final protected def receiveAll(): Status = {
+    var nextStatus: Status = Status.None
     var messages = world.messages.get(this)
-    while (alive && messages.nonEmpty) {
-      alive = receive(messages.head)
+    while (nextStatus != Status.Dead && messages.nonEmpty) {
+      nextStatus |= receive(messages.head)
       messages = messages.tail
     }
-    alive
+    nextStatus
   }
-  protected def receive(m: Message): Boolean = m match {
+  protected def receive(m: Message): Status = m match {
     case _: message.Delete => remove()
     case h: message.Hit => hit(h)
-    case _ => true
+    case _ => Status.None
   }
 
-  protected def hit(hit: message.Hit): Boolean = {
+  protected def hit(hit: message.Hit): Status = {
     val neighbors = mutable.ArrayBuffer.empty[Entity]
     val groups = Parts.Grouping.empty
     var changed: Boolean = false
@@ -94,34 +96,32 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     }}
     if (groups.isEmpty) {
       world.messages.broadcast(new message.Removed(this), neighbors)
-      die()
+      Status.Dead
     } else if (groups.size > 1) {
       val broken = break(groups.finish).toArray
       world.actors ++= broken
       broken.foreach{e => world.messages.send(new message.Move(e), e) }
       world.messages.broadcast(new message.Move(this), neighbors) // todo: broken, not move
-      die()
+      Status.Dead
     } else if (changed) {
       // Need to send message to self to wake up?
       parts = groups.finish.head
-      world.messages.send(new message.Move(this), this) // todo: broken, not move
       world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
-      true
+      Status.Wake
     } else {
-      true
+      Status.None
     }
   }
 
-  protected def remove(): Boolean = if (immortal) true else {
+  protected def remove(): Status = if (immortal) Status.None else {
     world.messages.broadcast(new message.Removed(this), to=bordering)
-    die()
+    Status.Dead
   }
 
   final def wake(): Unit = { world.actors.wake(this) }
-  final protected def die(): Boolean = {
+  final protected def die(): Unit = {
     alive = false
     world.actors -= this
-    false
   }
   final protected def sleep(): Unit = { world.actors.sleep(this) }
 }

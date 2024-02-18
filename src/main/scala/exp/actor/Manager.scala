@@ -23,6 +23,8 @@ class Manager {
   // Visible animations
   private val animations: RTree[Long, Actor] = RTree.empty[Long, Actor](2)
 
+  val killed: mutable.ArrayBuffer[Long] = mutable.ArrayBuffer.empty
+
   // DEBUG
   def tree: RTree[Long, Entity] = entityTree
 
@@ -32,7 +34,7 @@ class Manager {
 
   def nextId: Actor.ID = { id += 1; id }
 
-  def -=(e: Entity): Unit = { entityTree -= e; awakeList.remove(e) }
+  def -=(e: Entity): Unit = { entityTree -= e; awakeList.remove(e); killed += e.id }
   def +=(e: Entity): Unit = if (e.isAlive) { entityTree += e; awakeList.add(e) }
   def ++=(es: IterableOnce[Entity]): Unit = es.iterator.filter(_.isAlive).foreach{e => this += e }
 
@@ -50,6 +52,7 @@ class Manager {
   def getParts(volume: Box[Long]): Iterator[Part] = near(volume).flatMap(_.overlappingParts(volume))
   def getPartsExcept(volume: Box[Long], e: Entity): Iterator[Part] = nearExcept(volume, e).flatMap(_.overlappingParts(volume))
 
+  def getEntity(id: Actor.ID): Option[Entity] = entityTree.get(id)
   def wake(e: Entity): Unit = if (e.isAlive) { awakeList += e }
   def sleep(e: Entity): Unit = { awakeList -= e }
   def moved(e: Entity, prev: Box[Long]): Unit = if (e.isAlive) { entityTree.moveEntry(e, prev) }

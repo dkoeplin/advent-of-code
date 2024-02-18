@@ -1,7 +1,7 @@
 package exp.actor
 
 import common.immutable.Box
-import common.traits.HasBox
+import common.traits.RTreeHash
 import exp.World
 import exp.draw.Draw2D
 
@@ -22,9 +22,12 @@ abstract class Actor(val id: Actor.ID, val world: World) {
   def tick(): Unit
   def draw(g: Draw2D): Unit
 
-  protected def die(): Boolean
+  protected def die(): Unit
 }
 object Actor {
   type ID = Long
-  implicit def actorHasBox[A<:Actor]: HasBox[Long, A] = _.bbox
+  implicit def actorHasRTreeHash[A<:Actor]: RTreeHash[Long, A] = new RTreeHash[Long,A] {
+    override def hash(a: A): Long = a.id
+    override def box(a: A): Box[ID] = a.bbox
+  }
 }

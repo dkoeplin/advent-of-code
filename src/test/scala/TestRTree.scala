@@ -1,7 +1,7 @@
 import common.immutable.{Box, Pos}
 import common.implicits.TupleOps._
 import common.mutable.RTree
-import common.traits.HasBox
+import common.traits.RTreeHash
 import org.scalatest.flatspec._
 import org.scalatest.matchers._
 
@@ -11,7 +11,10 @@ class TestRTree extends AnyFlatSpec with should.Matchers {
     override def toString: String = s"$id"
   }
   object LabeledBox {
-    implicit val kLabeledBoxHasBox: HasBox[Int,LabeledBox] = _.box
+    implicit val kLabeledBoxHasBox: RTreeHash[Int,LabeledBox] = new RTreeHash[Int,LabeledBox]{
+      override def hash(value: LabeledBox): Int = value.id
+      override def box(value: LabeledBox): Box[Int] = value.box
+    }
   }
   implicit class BoxOps(x: Box[Int]) {
     def named(id: Int): LabeledBox = LabeledBox(x, id)

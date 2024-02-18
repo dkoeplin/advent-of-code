@@ -39,14 +39,16 @@ class World extends Component {
     tickTime = (end - start) / 1000000
     maxTickTime = Math.max(maxTickTime, tickTime)
 
-    if (prevActive > 0 && actors.awake.isEmpty) {
-      log.write("---------\n")
-      actors.entities.foreach{e => log.write(s"(${e.bbox} + ${e.loc}) named ${e.id}\n") }
-      actors.tree.dump()
-      log.flush()
-    }
-    prevActive = actors.awake.size
+    // if (prevActive > 0 && actors.awake.isEmpty) {
+      // log.write("---------\n")
+      // actors.entities.foreach{e => log.write(s"(${e.bbox} + ${e.loc}) named ${e.id}\n") }
+      // actors.tree.dump()
+      // log.flush()
+    // }
+    // prevActive = actors.awake.size
     time += 1
+
+    actors.killed.foreach{id => messages.clear(id) }
   }
 
   def reset(windowSize: Pos[Long]): Unit = {
@@ -110,8 +112,8 @@ class World extends Component {
     }
     def up(pt: Pos[Long]): Unit = pending.foreach{p =>
       // actors.tree.dump{str => log.write(s"$str\n") }
-      log.write(s"$time: (${p.bbox} + ${p.loc}) named ${p.id}\n")
-      log.flush()
+      // log.write(s"$time: (${p.bbox} + ${p.loc}) named ${p.id}\n")
+      // log.flush()
 
       actors += pending.get
       pending = None

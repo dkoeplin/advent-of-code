@@ -1,7 +1,7 @@
 package common.mutable
 
 import common.immutable.{Box, Pos}
-import common.traits.HasBox
+import common.traits.RTreeHash
 
 import scala.collection.mutable
 
@@ -9,9 +9,9 @@ import scala.collection.mutable
  * An unbalanced / variable granularity variation of an R-Tree
  * Keeps a sparse N-dimensional space with ~O(log(S)) lookup from an N-D index or volume to one or more entries.
  */
-class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int: Integral[A], vol: HasBox[A,V]) {
-  import HasBox._
+class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int: Integral[A], vol: RTreeHash[A,V]) {
   import RTree.{clamp, clampDown}
+  import RTreeHash._
   import int._
 
   private type Entry = Either[Node,Set[V]]
@@ -168,7 +168,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   private def add(v: V): Unit = {
-    entries += v
+    entries(v.hash) = v
     addAt(v, v.box)
   }
 
@@ -189,7 +189,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   private def remove(v: V): Unit = {
-    entries -= v
+    entries.remove(v.hash)
     removeFrom(v, v.box)
   }
 
@@ -217,7 +217,7 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   def bbox: Box[A] = bounds.getOrElse(Box.unit(Pos.zero[A](rank))) + offset
   def shape: Pos[A] = bounds.map(_.shape).getOrElse(Pos.zero[A](rank))
   def size: Int = entries.size
-  def iterator: Iterator[V] = entries.iterator
+  def iterator: Iterator[V] = entries.valuesIterator
   def move(delta: Pos[A]): Unit = { offset += delta }
   def moveto(pos: Pos[A]): Unit = { offset = pos }
 
@@ -245,19 +245,21 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     nodes
   }
 
+  def get(key: A): Option[V] = entries.get(key)
+
   private var offset: Pos[A] = Pos.zero[A](rank)
   private var bounds: Option[Box[A]] = None
-  private val entries = mutable.LinkedHashSet.empty[V]
+  private val entries = mutable.LinkedHashMap.empty[A,V]
   private val root = Node.empty(grid = Pos.fill[A](rank, int.fromInt(1024)))
 }
 object RTree {
-  def empty[A:Integral,V](rank: Int, maxEntries: Int = 10)(implicit v: HasBox[A,V]): RTree[A,V] = new RTree[A,V](rank, maxEntries)
-  def from[A:Integral,V](rank: Int, entries: IterableOnce[V], maxEntries: Int = 10)(implicit v: HasBox[A,V]): RTree[A,V] = {
+  def empty[A:Integral,V](rank: Int, maxEntries: Int = 10)(implicit v: RTreeHash[A,V]): RTree[A,V] = new RTree[A,V](rank, maxEntries)
+  def from[A:Integral,V](rank: Int, entries: IterableOnce[V], maxEntries: Int = 10)(implicit v: RTreeHash[A,V]): RTree[A,V] = {
     val tree = new RTree(rank, maxEntries)
     entries.iterator.foreach{entry => tree += entry}
     tree
   }
-  def single[A:Integral,V](entry: V, maxEntries: Int = 10)(implicit v: HasBox[A,V]): RTree[A,V] = {
+  def single[A:Integral,V](entry: V, maxEntries: Int = 10)(implicit v: RTreeHash[A,V]): RTree[A,V] = {
     val tree = new RTree(v.box(entry).rank, maxEntries)
     tree += entry
     tree
