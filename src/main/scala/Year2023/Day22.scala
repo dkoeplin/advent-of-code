@@ -1,7 +1,6 @@
 package Year2023
 
 import common.immutable.{Box, Pos}
-import common.viz.VolumeVisualizer
 
 object Day22 extends common.AoC(22, 2023) {
   case class Brick(volume: Box[Int], id: Int) {
@@ -38,7 +37,4 @@ object Day22 extends common.AoC(22, 2023) {
   }
   println(s"Part 1: ${dropped.part1}")
   println(s"Part 2: ${dropped.part2}")
-
-  visualizers += VolumeVisualizer(dropped.fallen.map(_.volume))
-  show()
 }
