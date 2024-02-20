@@ -43,8 +43,13 @@ object Exp extends scala.swing.SimpleSwingApplication {
     peer.setVisible(true)
 
     private val timer = new java.util.Timer
-    timer.scheduleAtFixedRate(new TimerTask{ override def run(): Unit = world.tick() }, 0, tickRate)
-    timer.scheduleAtFixedRate(new TimerTask{ override def run(): Unit = repaint() }, 0, frameRate)
+    timer.scheduleAtFixedRate(new TimerTask {
+      override def run(): Unit = {
+        world.tick()
+        repaint()
+      }
+    }, 0, tickRate)
+    // timer.scheduleAtFixedRate(new TimerTask{ override def run(): Unit = repaint() }, 0, frameRate)
 
     val view = new View2D(this)
     world.requestFocus()

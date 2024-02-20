@@ -14,6 +14,8 @@ class TestRTree extends AnyFlatSpec with should.Matchers {
     implicit val kLabeledBoxHasBox: RTreeHash[Int,LabeledBox] = new RTreeHash[Int,LabeledBox]{
       override def hash(value: LabeledBox): Int = value.id
       override def box(value: LabeledBox): Box[Int] = value.box
+
+      override def move(value: LabeledBox, delta: Pos[Int]): LabeledBox = value.copy(box = value.box + delta)
     }
   }
   implicit class BoxOps(x: Box[Int]) {
@@ -132,5 +134,14 @@ class TestRTree extends AnyFlatSpec with should.Matchers {
     tree((0, -300) to (1024, 1000)) should be (Set(a, b))
     tree((0, 0) to (100, 100)) should be (Set.empty)
     tree((0, 885) to (100, 886)) should be (Set(a))
+  }
+
+  "RTree" should "get components" in {
+    val tree = RTree.empty[Int, LabeledBox](rank = 2, maxEntries = 10)
+    val a = ((0, 0) to(100, 100)) named 1
+    val b = ((0, 101) to(100, 200)) named 2
+    tree += a
+    tree += b
+    tree.components().toList should be(List(Set(a, b)))
   }
 }

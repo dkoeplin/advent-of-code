@@ -1,7 +1,7 @@
 package exp.actor.entity
 
-import common.immutable.{Box, Pos}
-import common.mutable.RTree
+import common.immutable.{Border, Box, Pos, View}
+import common.mutable.BorderedRTree
 import exp.actor.Actor
 import exp.draw.Draw2D
 import exp.message.Message
@@ -9,23 +9,26 @@ import exp.{World, message}
 
 import scala.collection.mutable
 
-abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(id, world) {
-  protected var parts: Parts = _parts
+abstract class Entity(id: Actor.ID, world: World, parts: Part.Tree) extends Actor(id, world) {
   protected var velocity: Pos[Long] = Pos.zero[Long](2)
   protected var accel: Pos[Long] = Pos(0, if (falls) world.gravity else 0)
 
+  def break(groups: Iterable[Part.Tree]): Iterable[Entity]
+
   def loc: Pos[Long] = parts.loc
-  def bbox: Box[Long] = parts.bbox
-  def tree: RTree[Long,_] = parts.tree
-
-  def iterator: Iterator[Part] = parts.iterator
-  def borders: Iterator[Box[Long]] = parts.bounds.all
   def size: Long = iterator.map(_.box.size).sum
-
   def falls: Boolean = iterator.forall(_.material.falls)
   def immortal: Boolean = iterator.forall(_.material.immortal)
+  def bbox: Box[Long] = parts.bbox
+  def tree: Part.Tree = parts
 
-  def break(groups: Iterable[Parts]): Iterable[Entity]
+  def iterator: Iterator[Part] = parts.iterator
+
+  def borders(): Iterator[Border[Long]] = parts.borders()
+  def borders(predicate: Border[Long] => Boolean): Iterator[Border[Long]] = parts.borders(predicate)
+
+  def bounds(): Iterator[Box[Long]] = parts.borders().map(_.box)
+  def bounds(predicate: Border[Long] => Boolean): Iterator[Box[Long]] = parts.borders(predicate).map(_.box)
 
   def move(delta: Pos[Long]): Unit = moveto(loc + delta)
   def moveto(pos: Pos[Long]): Unit = {
@@ -34,11 +37,17 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
     world.actors.moved(this, prev)
   }
 
-  def above: Iterator[Entity] = parts.bounds.up.flatMap{b => world.actors.getExcept(b, this) }
-  def bordering: Iterator[Entity] = parts.bounds.all.flatMap{ b => world.actors.getExcept(b, this) }
+  def above: Iterator[Entity] = bounds(World.Up).flatMap { b => world.actors.getExcept(b, this) }
 
-  def draw(g: Draw2D): Unit = parts.draw(g)
-  def highlight(g: Draw2D, brighter: Boolean): Unit = parts.highlight(g, brighter)
+  def bordering: Iterator[Entity] = bounds().flatMap { b => world.actors.getExcept(b, this) }
+
+  def draw(g: Draw2D): Unit = g.at(loc) {
+    parts.view.iterator.foreach { case View(part) => part.draw(g) }
+  }
+
+  def highlight(g: Draw2D, brighter: Boolean): Unit = g.at(loc) {
+    parts.view.iterator.foreach { case View(part) => part.highlight(g, brighter) }
+  }
 
   def overlappingParts(rhs: Box[Long]): Iterator[Part] = iterator.filter(_.box.overlaps(rhs))
   def overlaps(rhs: Box[Long]): Boolean = iterator.exists(_.box.overlaps(rhs))
@@ -58,7 +67,7 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
         die()
       } else if (velocity.magnitude == 0) {
         if (nextStatus != Status.Wake) sleep()
-      } else if (initialVelocity.magnitude == 0) {
+      } else if (initialVelocity.magnitude == 0) { // Notify blocks above that we're moving
         world.messages.broadcast(new message.Move(this), to=above)
       }
       move(velocity)
@@ -66,51 +75,51 @@ abstract class Entity(id: Actor.ID, world: World, _parts: Parts) extends Actor(i
   }
 
   final protected def receiveAll(): Status = {
+    val neighbors = mutable.LinkedHashSet.empty[Entity]
     var nextStatus: Status = Status.None
     var messages = world.messages.get(this)
     while (nextStatus != Status.Dead && messages.nonEmpty) {
-      nextStatus |= receive(messages.head)
+      nextStatus |= receive(messages.head, neighbors)
       messages = messages.tail
+    }
+    if (nextStatus == Status.Hits) {
+      val groups = parts.view.components()
+      if (groups.size > 1) {
+        world.messages.broadcast(new message.Move(this), neighbors) // todo: broken, not move
+        // Broken - need to update
+        val broken = break(groups.map { group => BorderedRTree(parts.rank, loc, group) })
+        world.actors ++= broken
+        broken.foreach { e => world.messages.send(new message.Move(e), e) }
+        nextStatus = Status.Dead
+      } else {
+        // Not broken - just broadcast to neighbors
+        world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
+        nextStatus = Status.Wake
+      }
     }
     nextStatus
   }
-  protected def receive(m: Message): Status = m match {
+
+  protected def receive(m: Message, neighbors: mutable.LinkedHashSet[Entity]): Status = m match {
     case _: message.Delete => remove()
-    case h: message.Hit => hit(h)
+    case h: message.Hit => hit(h, neighbors)
     case _ => Status.None
   }
 
-  protected def hit(hit: message.Hit): Status = {
-    val neighbors = mutable.ArrayBuffer.empty[Entity]
-    val groups = Parts.Grouping.empty
+  protected def hit(hit: message.Hit, neighbors: mutable.LinkedHashSet[Entity]): Status = {
+    // val groups = Parts.Grouping.empty
     var changed: Boolean = false
-    parts.foreach{part => part.box.intersect(hit.box) match {
-      case Some(both) =>
-        changed = true
-        neighbors ++= world.actors.getExcept(Box(part.box.min - 1, part.box.max + 1), this)
-        groups ++= (part diff hit.box)
-        if (part.health > hit.strength)
-          groups += Part(both, part.material, part.health - hit.strength)
-      case None =>
-        groups += part
-    }}
-    if (groups.isEmpty) {
-      world.messages.broadcast(new message.Removed(this), neighbors)
-      Status.Dead
-    } else if (groups.size > 1) {
-      val broken = break(groups.finish).toArray
-      world.actors ++= broken
-      broken.foreach{e => world.messages.send(new message.Move(e), e) }
-      world.messages.broadcast(new message.Move(this), neighbors) // todo: broken, not move
-      Status.Dead
-    } else if (changed) {
-      // Need to send message to self to wake up?
-      parts = groups.finish.head
-      world.messages.broadcast(new message.Move(this), neighbors) // todo: changed, not move
-      Status.Wake
-    } else {
-      Status.None
+    val relative = hit.box - parts.loc
+    parts.view.apply(relative).foreach { case view@View(part) =>
+      changed = true
+      val area = Box(part.box.min + parts.loc - 1, part.box.max + parts.loc + 1)
+      neighbors ++= world.actors.getExcept(area, this)
+      parts.view -= view
+      parts.view ++= (part diff relative).map(View.apply)
+      if (part.health > hit.strength)
+        parts.view += View(new Part((part.box intersect relative).get, part.material, part.health - hit.strength))
     }
+    if (changed) Status.Hits else Status.None
   }
 
   protected def remove(): Status = if (immortal) Status.None else {

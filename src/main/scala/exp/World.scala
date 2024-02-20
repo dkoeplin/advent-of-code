@@ -1,6 +1,6 @@
 package exp
 
-import common.immutable.{Box, Pos}
+import common.immutable.{Border, Box, Dir, Pos}
 import exp.actor.entity.{Block, Entity}
 import exp.draw.Draw2D
 import exp.screen.Screen
@@ -190,6 +190,9 @@ class World extends Component {
   }
 }
 object World {
+  val Up: Border[Long] => Boolean = { border => isVertical(border.dim) && border.dir == Dir.Neg }
+  val NotUp: Border[Long] => Boolean = { border => !isVertical(border.dim) || border.dir == Dir.Pos }
+
   def isVertical(dim: Int): Boolean = { dim == 1 }
   def isVertical[T:Numeric](x: Pos[T]): Boolean = isVertical(dim(x))
   def dim[T:Numeric](delta: Pos[T]): Int = delta.iterator.zipWithIndex.find(_._1 != implicitly[Numeric[T]].zero).get._2

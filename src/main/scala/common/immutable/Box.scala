@@ -78,20 +78,28 @@ class Box[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vol
 
   /// Returns an iterator over the edges of this volume.
   /// Edges are inside the volume itself, up to a depth of `width` from each side.
-  def edges(width: T): Iterator[Border[T]] = borders(-width, num.zero)
+  def edges(width: T = num.one): Iterator[Border[T]] = borders(-width, num.zero)
 
+  /// Returns an iterator over the borders of this volume.
+  /// Borders are typically outside the volume itself, starting from the given distance away.
+  /// The default for integral types is a border with a width of 1 at a distance of 1, e.g. [max+1,max+1].
   def borders(): Iterator[Border[T]] = borders(num.one, num.one)
   def borders(width: T, dist: T): Iterator[Border[T]]
-    = (0 until rank).iterator.flatMap { dim =>
-      val dir = Pos.unit[T](rank, dim)
-      val inner = dir * dist
-      val outer = dir * (width + dist)
-      Iterator(Border(dim, -dir, Box(min - outer, max.alter(dim, min(dim))) - inner),
-               Border(dim, dir, Box(min.alter(dim, max(dim)) + inner, max + outer)))
-    }
+  = (0 until rank).iterator.flatMap { dim => Dir.iterator.map { dir => border(dim, dir, width, dist) } }
 
-  def above(width: T = implicitly[Numeric[T]].one, delta: T = implicitly[Numeric[T]].one): Box[T]
-    = Box(min - Pos.unit[T](rank, rank - 1) * width, max.alter(rank - 1, min(rank - 1) - delta))
+  def border(dim: Int, dir: Dir, width: T = num.one, dist: T = num.one): Border[T] = {
+    val unit = Pos.unit[T](rank, dim)
+    val inner = unit * dist
+    val outer = unit * (width + dist - num.one)
+    val box = {
+      if (dir == Dir.Neg) Box(min - outer, max.alter(dim, min(dim))) - inner
+      else Box(min.alter(dim, max(dim)) + inner, max + outer)
+    }
+    Border(dim, dir, box)
+  }
+
+  // def above(width: T = implicitly[Numeric[T]].one, delta: T = implicitly[Numeric[T]].one): Box[T]
+  //   = Box(min - Pos.unit[T](rank, rank - 1) * width, max.alter(rank - 1, min(rank - 1) - delta))
 
   def intersect(rhs: Box[T]): Option[Box[T]]
     = if (!overlaps(rhs)) None else Some(Box(min max rhs.min, max min rhs.max))

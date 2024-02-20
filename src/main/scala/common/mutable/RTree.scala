@@ -37,9 +37,6 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     def empty(grid: Pos[A]): Node = new Node(None, mutable.HashMap.empty[Pos[A],Entry], grid)
   }
 
-  private val kGridBase: A = int.fromInt(2)
-  private val kGridMin: A = int.fromInt(2)
-
   private def increaseDepth(parent: Node, values: Set[_]): Boolean
     = values.size >= kMaxEntries && parent.grid.iterator.forall(_ > kGridMin)
 
@@ -62,8 +59,8 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
     new Node(Some((parent, pos)), map, grid)
   }
 
-  private def createEntry(rootParent: Node, pos: Pos[A], values: Set[V]): Entry = if (!increaseDepth(rootParent, values)) Right(values)
-  else {
+  private def createEntry(rootParent: Node, pos: Pos[A], values: Set[V]): Entry
+  = if (!increaseDepth(rootParent, values)) Right(values) else {
     case class Work(parent: Node, pos: Pos[A])
 
     val root = makeNode(rootParent, pos, values)
@@ -194,7 +191,6 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
   }
 
   def dump(out: String => Unit = println): Unit = {
-    out(s"RTree @ $offset:")
     preorder{(lvl, box, gd) => out(s"${"  " * lvl}$box: Grid $gd") }
             {(lvl, box, vs) => out(s"${"  " * (lvl + 1)}$box: ${vs.mkString(", ")}") }
   }
@@ -207,19 +203,15 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
 
   def apply(i: Box[A]): Set[V] = {
     val set = mutable.LinkedHashSet.empty[V]
-    val relative = i - offset
-    traverseDefined(relative){(_, _, entries) => set ++= entries.filter(_.box.overlaps(relative)) }
+    traverseDefined(i) { (_, _, entries) => set ++= entries.filter(_.box.overlaps(i)) }
     set.toSet
   }
   def apply(i: Pos[A]): Set[V] = apply(Box(i, i))
 
-  def loc: Pos[A] = offset
-  def bbox: Box[A] = bounds.getOrElse(Box.unit(Pos.zero[A](rank))) + offset
+  def bbox: Box[A] = bounds.getOrElse(Box.unit(Pos.zero[A](rank)))
   def shape: Pos[A] = bounds.map(_.shape).getOrElse(Pos.zero[A](rank))
   def size: Int = entries.size
   def iterator: Iterator[V] = entries.valuesIterator
-  def move(delta: Pos[A]): Unit = { offset += delta }
-  def moveto(pos: Pos[A]): Unit = { offset = pos }
 
   def moveEntry(v: V, prev: Box[A]): Unit = {
     val worklist = new Worklist
@@ -247,7 +239,23 @@ class RTree[A,V](val rank: Int, private val kMaxEntries: Int = 10)(implicit int:
 
   def get(key: A): Option[V] = entries.get(key)
 
-  private var offset: Pos[A] = Pos.zero[A](rank)
+  def components(): Iterable[Set[V]] = {
+    var id: Int = 0
+    val componentMap = mutable.HashMap.empty[V, Int]
+    val equivalent = common.mutable.EquivalentSets.empty[Int]
+    for (entry <- entries.values) {
+      val neighbors = entry.box.borders().flatMap{border => apply(border.box) }.toSet
+      val components = neighbors.flatMap{ componentMap.get }
+      val component = components.headOption.getOrElse{ id += 1; id}
+      componentMap(entry) = component
+      equivalent.add(components + component)
+    }
+    componentMap.view.groupMapReduce{case (_, k) => equivalent(k) }{case (v, _) => Set(v) }{_ ++ _}.values
+  }
+
+  private val kGridBase: A = int.fromInt(2)
+  private val kGridMin: A = int.fromInt(2)
+
   private var bounds: Option[Box[A]] = None
   private val entries = mutable.LinkedHashMap.empty[A,V]
   private val root = Node.empty(grid = Pos.fill[A](rank, int.fromInt(1024)))

@@ -1,6 +1,7 @@
 package exp.screen
 
 import common.immutable.Pos
+import common.mutable.RTree
 import exp.World
 import exp.actor.entity.Entity
 import exp.draw.Draw2D
@@ -24,15 +25,17 @@ class Debug(world: World) extends Screen {
     ).zipWithIndex.foreach{case (text, i) => g.window.drawText(text, Pos(10, 20*(i + 1))) }
 
     world.actors.awake.foreach{
-      case e: Entity => e.borders.foreach{border => g.fillRect(border, Draw2D.kRed) }
+      case e: Entity => e.borders().foreach { border => g.fillRect(border.box, Draw2D.kRed) }
       case _ =>
     }
-    def drawTree(tree: common.mutable.RTree[Long, _]): Unit = {
-      tree.preorder{case (_,box,_) => box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kRed) }}
-                   {case (_,box,_) => box.edges(1).foreach{edge => g.fillRect(edge.volume, Draw2D.kRed) }}
+
+    def drawTree(tree: RTree[Long, _]): Unit = {
+      tree.preorder { case (_, box, _) => box.edges(1).foreach { edge => g.fillRect(edge.box, Draw2D.kRed) } } { case (_, box, _) => box.edges(1).foreach { edge => g.fillRect(edge.box, Draw2D.kRed) } }
     }
     over match {
-      case Some(e) => drawTree(e.tree)
+      case Some(e) => g.at(e.loc) {
+        drawTree(e.tree.valueTree)
+      }
       case None    => drawTree(world.actors.tree)
     }
     /*over.foreach{e =>

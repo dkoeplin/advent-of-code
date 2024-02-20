@@ -1,6 +1,6 @@
 package exp.actor
 
-import common.immutable.Box
+import common.immutable.{Box, Pos}
 import common.traits.RTreeHash
 import exp.World
 import exp.draw.Draw2D
@@ -29,5 +29,7 @@ object Actor {
   implicit def actorHasRTreeHash[A<:Actor]: RTreeHash[Long, A] = new RTreeHash[Long,A] {
     override def hash(a: A): Long = a.id
     override def box(a: A): Box[ID] = a.bbox
+
+    override def move(value: A, delta: Pos[ID]): A = throw new Exception("Cannot copy actors")
   }
 }

@@ -30,7 +30,7 @@ object Day18 extends common.AoC(18, 2023) {
         val next = lagoon.expanded(diff.head)
         frontier = frontier ++ diff.tail
         lagoon = if (next.nonEmpty) new Lagoon(lagoon.dug ++ next, start.bounds) else start
-        frontier = if (next.nonEmpty) frontier ++ next.get.borders().map(_.volume) else Nil
+        frontier = if (next.nonEmpty) frontier ++ next.get.borders().map(_.box) else Nil
       }
     }
     lagoon
@@ -76,7 +76,7 @@ object Day18 extends common.AoC(18, 2023) {
         .filter(_.remaining.isEmpty)
         .flatMap(_.x.map(_ - 1))
 
-    def filled(): Lagoon = dug.iterator.flatMap(_.borders()).foldLeft(this){(current, border) => fillOne(border.volume, current)}
+    def filled(): Lagoon = dug.iterator.flatMap(_.borders()).foldLeft(this) { (current, border) => fillOne(border.box, current) }
 
     def matrix(): Matrix[Char] = Matrix(bounds, bounds.iterator.map{p => if (isDug(p)) '#' else '.' }.toArray)
 
