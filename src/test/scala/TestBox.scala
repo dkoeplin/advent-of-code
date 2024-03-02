@@ -15,6 +15,11 @@ class TestBox extends AnyFlatSpec with should.Matchers {
     v.iterator.foreach{i => test(v, i) }
   }
 
+  "Box" should "have equal thickness borders" in {
+    val v = Box(Pos(0,0), Pos(2,2))
+    v.borders().foreach{_.thickness should be (1) }
+  }
+
   "Box" should "iterate" in {
     val v = Box(Pos(0,0,0), Pos(2,2,2))
     val pts = (0 to 2).flatMap{i =>(0 to 2).flatMap{j => (0 to 2).map{k =>Pos(i, j, k) }}}

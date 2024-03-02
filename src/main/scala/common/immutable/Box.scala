@@ -85,15 +85,15 @@ class Box[T](val l: Pos[T], val r: Pos[T])(implicit num: Numeric[T]) extends Vol
   /// The default for integral types is a border with a width of 1 at a distance of 1, e.g. [max+1,max+1].
   def borders(): Iterator[Border[T]] = borders(num.one, num.one)
   def borders(width: T, dist: T): Iterator[Border[T]]
-  = (0 until rank).iterator.flatMap { dim => Dir.iterator.map { dir => border(dim, dir, width, dist) } }
+    = (0 until rank).iterator.flatMap{ dim => Dir.iterator.map{dir => border(dim, dir, width, dist) }}
 
   def border(dim: Int, dir: Dir, width: T = num.one, dist: T = num.one): Border[T] = {
     val unit = Pos.unit[T](rank, dim)
     val inner = unit * dist
-    val outer = unit * (width + dist - num.one)
+    val outer = unit * (width - num.one)
     val box = {
       if (dir == Dir.Neg) Box(min - outer, max.alter(dim, min(dim))) - inner
-      else Box(min.alter(dim, max(dim)) + inner, max + outer)
+      else                Box(min.alter(dim, max(dim)), max + outer) + inner
     }
     Border(dim, dir, box)
   }

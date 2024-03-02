@@ -110,7 +110,7 @@ abstract class Entity(id: Actor.ID, world: World, parts: Part.Tree) extends Acto
     // val groups = Parts.Grouping.empty
     var changed: Boolean = false
     val relative = hit.box - parts.loc
-    parts.view.apply(relative).foreach { case view@View(part) =>
+    parts.view.apply(relative).foreach{case view@View(part) =>
       changed = true
       val area = Box(part.box.min + parts.loc - 1, part.box.max + parts.loc + 1)
       neighbors ++= world.actors.getExcept(area, this)

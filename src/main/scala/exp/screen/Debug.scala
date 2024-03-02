@@ -30,12 +30,12 @@ class Debug(world: World) extends Screen {
     }
 
     def drawTree(tree: RTree[Long, _]): Unit = {
-      tree.preorder { case (_, box, _) => box.edges(1).foreach { edge => g.fillRect(edge.box, Draw2D.kRed) } } { case (_, box, _) => box.edges(1).foreach { edge => g.fillRect(edge.box, Draw2D.kRed) } }
+      tree.preorder{case (_, box, _) => box.edges(1).foreach{edge => g.fillRect(edge.box, Draw2D.kRed) }}
+                   {case (_, box, _) => box.edges(1).foreach{edge => g.fillRect(edge.box, Draw2D.kRed) }}
     }
     over match {
-      case Some(e) => g.at(e.loc) {
-        drawTree(e.tree.valueTree)
-      }
+      case Some(e) => e.borders().foreach{border => g.fillRect(border.box, Draw2D.kRed) }
+        // drawTree(e.tree.valueTree)
       case None    => drawTree(world.actors.tree)
     }
     /*over.foreach{e =>

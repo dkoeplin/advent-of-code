@@ -178,8 +178,23 @@ class World extends Component {
       children = if (debug.isEmpty) children + new screen.Debug(this) else children - debug.get
 
     case KeyPressed(_, Key.D, _, _) =>
-      actors.entities.foreach{e => println(s"${e.id}: ${e.bbox} @ ${e.loc}") }
-      actors.tree.dump()
+      world.view.flatMap{v => world.actors.find(v.focus) } match {
+        case Some(e) =>
+          val box = Box(e.bbox.min - 5, e.bbox.max + 5)
+          println(s"Bounds: $box (${box.shape})")
+          (box.min.y to box.max.y).foreach{y =>
+            val line = (box.min.x to box.max.x).map{x =>
+              val pos = Pos(x, y)
+              if (e.tree.hasValueAt(pos)) 'X' else if (e.tree.hasBorderAt(pos)) 'O' else '.'
+            }.mkString
+            log.write(line)
+            log.write('\n')
+          } //.grouped(box.shape.x.toInt).foreach{line => log.write(line.mkString + "\n") }
+        case None =>
+          actors.entities.foreach{e => log.write(s"${e.id}: ${e.bbox} @ ${e.loc}") }
+          actors.tree.dump{line => log.write(line); log.write("\n") }
+      }
+      log.flush()
 
     case KeyReleased(_, key, _, _) => prevKey = Some(key)
 
